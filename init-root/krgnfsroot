@@ -1,0 +1,92 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          krgnfsroot
+# Required-Start:    $network
+# Required-Stop:
+# Default-Start:     S
+# Default-Stop:
+# Description:       Remount / through NFS on the NFS server if
+#                    it is part of the Kerrighed cluster.
+### END INIT INFO
+
+# Author: Jean Parpaillon <jean.parpaillon@kerlabs.com>
+#
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="Remount / with NFS"
+NAME=krgnfsroot
+DEFAULT=/etc/default/$NAME
+
+# Run only with Kerrighed kernel
+[ -e /sys/kerrighed/node_id ] || exit 0
+
+# Read configuration variable file if it is present
+[ -r $DEFAULT ] && . $DEFAULT
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.2-14) to ensure that this file is present
+# and status_of_proc is working.
+. /lib/lsb/init-functions
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+    if [ "$REMOUNTNFS" = "true" ]; then
+	mount 127.0.0.1:/ /
+	RET=$?
+    fi
+    return ${RET:-0}
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+    return 0
+}
+
+#
+# Function that sends a SIGHUP to the daemon/service
+#
+do_reload() {
+	return 0
+}
+
+case "$1" in
+  start|restart|force-reload)
+	log_daemon_msg "$DESC"
+	do_start
+	case "$?" in
+		0|1) log_end_msg 0 ;;
+		2) log_end_msg 1 ;;
+	esac
+	;;
+  stop)
+	log_daemon_msg "Stopping $NAME"
+	do_stop
+	case "$?" in
+		0|1) log_end_msg 0 ;;
+		2) log_end_msg 1 ;;
+	esac
+	;;
+  status)
+	if [ -n "$(mount | sed '/^\/\S\+\s\+on\s\+\/\s\+.*/!d')" ]; then
+	    echo "'/' not mounted as NFS"
+	else
+	    echo "'/' mounted as NFS"
+	fi
+       ;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+	exit 3
+	;;
+esac
+
+:
