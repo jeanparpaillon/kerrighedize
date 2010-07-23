@@ -21,30 +21,34 @@ _DEFAULT_ROOT = $(patsubst %,default-root/%, \
 	krgnfsroot.conf \
 	)
 
-_SCRIPTS = bin/init-krg
+_rootSCRIPTS = bin/init-krg
 
 EXTRA_DIST= \
-	$(_SCRIPTS) \
+	$(_rootSCRIPTS) \
 	$(_INIT_KRG) \
 	$(_DEFAULT_KRG) \
 	$(_INIT_ROOT) \
 	$(_DEFAULT_ROOT)
 
-install-local:
-	for file in $(_SCRIPTS); do \
+install-exec-local:
+	for file in $(_rootSCRIPTS); do \
 	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/sbin; \
 	done
 	mkdir -p $(DESTDIR)/etc/kerrighed/init.d
 	for file in $(_INIT_KRG); do \
 	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/etc/kerrighed/init.d; \
 	done
-	for file in $(_DEFAULT_KRG); do \
-	  $(install_sh_DATA) $$file $(DESTDIR)/etc/kerrighed; \
-	done
 	mkdir -p $(DESTDIR)/etc/init.d
 	for file in $(_INIT_ROOT); do \
 	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/etc/init.d; \
 	done
+
+install-data-local:
+	mkdir -p $(DESTDIR)/etc/kerrighed
+	for file in $(_DEFAULT_KRG); do \
+	  $(install_sh_DATA) $$file $(DESTDIR)/etc/kerrighed; \
+	done
+	mkdir -p $(DESTDIR)/etc/default
 	for file in $(_DEFAULT_ROOT); do \
 	  $(install_sh_DATA) $$file $(DESTDIR)/etc/default; \
 	done
