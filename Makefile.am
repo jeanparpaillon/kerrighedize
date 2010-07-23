@@ -1,68 +1,67 @@
-### Makefile.am for kerrighed tools
+### Makefile.am for kerrighedize
 ###
-### Copyright 2006-2007 INRIA, All rights reserved
-### Copyright 2009 Kerlabs, All rights reserved
+### Copyright 2010 Kerlabs, All rights reserved
 ###
 ### Author:
 ###   Jean Parpaillon <jean.parpaillon@kerlabs.com>
 ###
-dist_sbin_SCRIPTS = krginit_helper krg_legacy_scheduler
-bin_PROGRAMS = migrate checkpoint restart krgcapset krgcr-run ipccheckpoint ipcrestart
-sbin_PROGRAMS = krgadm krginit
+_INIT_KRG = $(patsubst %,init-krg/%, \
+	hostname.sh network nfs-server pxelinux sshd \
+	)
 
-INCLUDES = -I@top_srcdir@/libs/include
-LDADD = @top_builddir@/libs/libkerrighed/libkerrighed.la @top_builddir@/libs/libkrgcb/libkrgcb.la
-AM_LDFLAGS = -Wl,--as-needed -static
+_DEFAULT_KRG = $(patsubst %,default-krg/%, \
+	network.conf nfs-server.conf pxelinux.cfg sshd.conf \
+	)
 
-migrate_SOURCES = migrate.c
-checkpoint_SOURCES = checkpoint.c
-restart_SOURCES = restart.c
-krgcapset_SOURCES = krgcapset.c
-krgadm_SOURCES = krgadm.c
-krgcr_run_SOURCES = krgcr-run.c
-krginit_SOURCES = krginit.c
-ipccheckpoint_SOURCES = ipccheckpoint.c
-ipcrestart_SOURCES = ipcrestart.c
+_INIT_ROOT = $(patsubst %,init-root/%, \
+	halt-krg krgnfsroot reboot-krg \
+	)
 
-EXTRA_DIST = \
-	krginit_helper.conf \
-	krginit_helper.in \
-	kerrighed.default \
-	kerrighed.init \
-	kerrighed.completion
+_DEFAULT_ROOT = $(patsubst %,default-root/%, \
+	krgnfsroot.conf \
+	)
 
-CLEANFILES = krginit_helper
+_SCRIPTS = bin/init-krg
 
-edit = sed \
-        -e 's|@bindir[@]|$(bindir)|g' \
-        -e 's|@sbindir[@]|$(sbindir)|g' \
-        -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
-        -e 's|@prefix[@]|$(prefix)|g' \
-        -e 's|@sysconfdir[@]|$(sysconfdir)|g'
+EXTRA_DIST= \
+	$(_SCRIPTS) \
+	$(_INIT_KRG) \
+	$(_DEFAULT_KRG) \
+	$(_INIT_ROOT) \
+	$(_DEFAULT_ROOT)
 
-if ENABLE_PRESERVE_CONF
-preserve = -p
-endif
-
-install-data-local: krginit_helper.conf kerrighed.completion kerrighed.init kerrighed.default
-	$(install_sh_DATA) $(preserve) $(srcdir)/krginit_helper.conf $(DESTDIR)$(sysconfdir)/kerrighed/krginit_helper.conf
-	$(install_sh_DATA) $(srcdir)/kerrighed.completion $(DESTDIR)$(sysconfdir)/bash_completion.d/kerrighed
-	$(install_sh_SCRIPT) $(srcdir)/kerrighed.init $(DESTDIR)$(sysconfdir)/init.d/kerrighed
-	$(install_sh_DATA) $(preserve) $(srcdir)/kerrighed.default $(DESTDIR)$(sysconfdir)/default/kerrighed
+install-local:
+	for file in $(_SCRIPTS); do \
+	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/sbin; \
+	done
+	mkdir -p $(DESTDIR)/etc/kerrighed/init.d
+	for file in $(_INIT_KRG); do \
+	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/etc/kerrighed/init.d; \
+	done
+	for file in $(_DEFAULT_KRG); do \
+	  $(install_sh_DATA) $$file $(DESTDIR)/etc/kerrighed; \
+	done
+	mkdir -p $(DESTDIR)/etc/init.d
+	for file in $(_INIT_ROOT); do \
+	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/etc/init.d; \
+	done
+	for file in $(_DEFAULT_ROOT); do \
+	  $(install_sh_DATA) $$file $(DESTDIR)/etc/default; \
+	done
 
 uninstall-local:
-	rm -f $(DESTDIR)$(sysconfdir)/kerrighed/krginit_helper.conf
-	rm -f $(DESTDIR)$(sysconfdir)/init.d/kerrighed
-	rm -f $(DESTDIR)$(sysconfdir)/default/kerrighed
-	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/kerrighed
-
-krginit_helper: Makefile
-	rm -f $@ $@.tmp
-	srcdir=''; \
-	  test -f ./$@.in || srcdir=$(srcdir)/; \
-	  $(edit) $${srcdir}$@.in >$@.tmp
-	chmod +x $@.tmp
-	chmod go-w $@.tmp
-	mv $@.tmp $@
-
-krginit_helper: krginit_helper.in
+	for file in $(_SCRIPTS); do \
+	  rm -f $(DESTDIR)/sbin/$$file; \
+	done
+	for file in $(_INIT_KRG); do \
+	  rm -f $(DESTDIR)/etc/kerrighed/init.d/$$file; \
+	done
+	for file in $(_DEFAULT_KRG); do \
+	  rm -f $(DESTDIR)/etc/kerrighed/$$file; \
+	done
+	for file in $(_INIT_ROOT); do \
+	  rm -f $(DESTDIR)/etc/init.d/$$file; \
+	done
+	for file in $(_DEFAULT_ROOT); do \
+	  rm -f $(DESTDIR)/etc/default/$$file; \
+	done
