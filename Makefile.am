@@ -32,15 +32,15 @@ EXTRA_DIST= \
 
 install-exec-local:
 	for file in $(_rootSCRIPTS); do \
-	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/sbin; \
+	  $(install_sh_SCRIPT) $$file $(DESTDIR)/sbin; \
 	done
 	mkdir -p $(DESTDIR)/etc/kerrighed/init.d
 	for file in $(_INIT_KRG); do \
-	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/etc/kerrighed/init.d; \
+	  $(install_sh_SCRIPT) $$file $(DESTDIR)/etc/kerrighed/init.d; \
 	done
 	mkdir -p $(DESTDIR)/etc/init.d
 	for file in $(_INIT_ROOT); do \
-	  $(install_sh_SCRIPTS) $$file $(DESTDIR)/etc/init.d; \
+	  $(install_sh_SCRIPT) $$file $(DESTDIR)/etc/init.d; \
 	done
 
 install-data-local:
