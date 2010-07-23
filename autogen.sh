@@ -55,3 +55,5 @@ if test -f $(dirname $0)/configure.ac; then
         autoconf
         )
 fi
+
+$(dirname $0)/configure $@
