@@ -1,0 +1,45 @@
+#!/bin/bash -e
+#
+# misc functions 
+function k_step_misc
+{
+    k_misc_master
+    k_misc_node
+}
+
+function k_misc_master
+{
+    level=/etc/kerrighed/rcmaster/start.d
+    ln -fs ../../init.d/hostname.sh ${level}/S02hostname.sh
+    ln -fs ../../init.d/network ${level}/S10network
+    ln -fs ../../init.d/sshd ${level}/S20sshd
+
+    level=/etc/kerrighed/rcmaster/halt.d
+    ln -fs ../../init.d/sshd ${level}/K10sshd
+    ln -fs ../../init.d/halt ${level}/K99halt
+
+    level=/etc/kerrighed/rcmaster/reboot.d
+    ln -fs ../../init.d/sshd ${level}/K10sshd
+    ln -fs ../../init.d/reboot ${level}/K99reboot
+
+    k_misc_master_distro
+}
+
+function k_misc_master_distro
+{
+    k_log_progress "k_misc_master_distro(): not implemented"
+    k_log_error
+    exit 1
+}
+
+function k_misc_node
+{
+    true
+}
+
+function k_misc_node_distro
+{
+    k_log_progress "k_node_distro(): not implemented"
+    k_log_error
+    exit 1
+}

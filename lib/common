@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #
-# misc functions 
+# common functions 
 dft_valueinput=${basedir}/var/vars.default
 dft_msg=${basedir}/var/vars.msg
 

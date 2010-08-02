@@ -105,6 +105,7 @@ k_load packages
 k_load nfs
 k_load tftp
 k_load pxe
+k_load misc
 
 # Run steps
 k_check_root
@@ -112,6 +113,7 @@ k_step_install
 k_step_nfsserver
 k_step_tftp
 k_step_pxe
+k_step_misc
 
 # Cleanup
 if [ -n "${valuesoutput}" ]

@@ -32,7 +32,7 @@ function k_install_package
 }
 
 k_log_progress "Updating package list"
-#apt-get --quiet --yes update > /dev/null
+apt-get --quiet --yes update > /dev/null
 if [ 0 -ne $? ]; then
     k_log_error
     exit 1

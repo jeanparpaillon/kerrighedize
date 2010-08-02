@@ -34,6 +34,5 @@ function k_configure_tftp
     level=/etc/kerrighed/rcmaster/reboot.d
     ln -fs ../../../init.d/atftpd ${level}/K10atftpd
 
-    # Populate tftp dir
     mkdir -p ${tftp_dir}
 }

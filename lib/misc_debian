@@ -1,0 +1,10 @@
+#!/bin/bash -e
+#
+# misc functions (Debian specific)
+
+function k_misc_master_distro
+{
+    level=/etc/kerrighed/rcmaster/start.d
+    ln -fs ../../../init.d/mountkernfs.sh ${level}/S01mountkernfs.sh
+    ln -fs ../../../init.d/checkroot.sh ${level}/S07checkroot.sh
+}
