@@ -1,11 +1,48 @@
 #!/bin/bash -e
 #
 # PXE functions (Debian implementation)
-pxe_packages=syslinux
+pxe_packages="syslinux initramfs-tools"
 
-k_load_var tftp_dir
+#k_load_var tftp_dir
 
 function k_configure_pxe_distro
 {
-    ln -s /usr/lib/syslinux/pxelinux.0 ${tftp_dir}/pxelinux.0
+    ln -fs /usr/lib/syslinux/pxelinux.0 ${tftp_dir}/pxelinux.0
+}
+
+function k_make_initrd
+{
+    if [ -z "${1}" ]
+    then
+	echo "k_make_initrd(): missing argument" >&2
+	exit 1
+    fi
+    v=${1}
+    ret=0
+
+    k_log_progress "Creating initramfs for Kerrighed kernel (${v})"
+    cat > /etc/initramfs-tools/initramfs.conf.nfs <<EOF
+MODULES=most
+BUSYBOX=y
+KEYMAP=n
+COMPRESS=gzip
+BOOT=nfs
+DEVICE=
+NFSROOT=auto
+EOF
+
+    mv /etc/initramfs-tools/initramfs.conf /etc/initramfs-tools/initramfs.conf.local
+    ln -fs initramfs.conf.nfs /etc/initramfs-tools/initramfs.conf
+    update-initramfs -k ${v} -b ${tftp_dir} -d > /dev/null
+    update-initramfs -k ${v} -b ${tftp_dir} -c > /dev/null
+    ret=$?
+
+    ln -fs initramfs.conf.local /etc/initramfs-tools/initramfs.conf
+
+    if [ 0 -eq $ret ]; then
+	k_log_success
+    else
+	k_log_error
+    fi
+    return $?
 }

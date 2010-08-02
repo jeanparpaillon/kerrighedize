@@ -9,6 +9,7 @@ trap k_clean ERR
 
 basedir=$(dirname $0)
 libdir=${basedir}/lib
+tftp_dir=/srv/tftp
 
 export k_valuesoutput_tmp=$(mktemp)
 export k_value
@@ -30,7 +31,7 @@ function k_load
     fi
 	
     module=$1
-    echo -n "Loading module $module... "
+    #echo -n "Loading module $module... "
 
     if [ -f /etc/debian_version ]
     then
@@ -50,8 +51,7 @@ function k_load
     if [ "${ret}" -eq "1" ]
     then
 	echo "k_load(): no such module in ${libdir}: ${module}"
-    else
-	echo "done."
+	exit 1
     fi
 
     return $ret
@@ -99,7 +99,7 @@ done
 
 # Load modules
 k_load log
-k_load misc
+k_load common
 k_load install
 k_load packages
 k_load nfs

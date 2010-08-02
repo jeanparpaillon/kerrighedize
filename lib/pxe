@@ -19,6 +19,34 @@ function k_configure_pxe_distro
     exit 1
 }
 
+function k_make_initrd
+{
+    k_log_progress "k_make_initrd(): not implemented"
+    k_log_error
+    exit 1
+}
+
+function k_check_kernel
+{
+    if [ -z "${1}" ]
+    then
+	echo "k_check_kernel(): missing argument" >&2
+	exit 1
+    fi
+    v=${1}
+    ret=0
+    k_log_progress "Check kernel ${v}"
+    ! ( [ -e /boot/config-${v} ] && grep -q "^CONFIG_KERRIGHED=y" /boot/config-${v} ) && ret=1
+    [ ! -d /lib/modules/${v} ] && ret=1
+    
+    if [ 0 -eq ${ret} ]; then
+	k_log_success
+    else
+	k_log_error
+    fi
+    return ${ret}
+}
+
 function k_configure_pxe
 {
     mkdir -p ${tftp_dir}/pxelinux.cfg
@@ -26,4 +54,55 @@ function k_configure_pxe
     # /etc/kerrighed/rcmaster/start.d
     level=/etc/kerrighed/rcmaster/start.d
     ln -fs ../../init.d/pxelinux ${level}/S99pxelinux
+
+    k_log "Looking for valid Kerrighed kernels: \n"
+    local i=0
+    local versions=()
+    for vmlinuz in $(find /boot -name 'vmlinuz-*' | sort -r); do
+	v=$(basename ${vmlinuz} | sed -e 's/vmlinuz-//')	
+	if k_check_kernel ${v}; then
+	    versions[$i]=${v}
+	    i=$(( i+1 ))
+	fi
+    done
+    k_log "\n"
+
+    version=
+    if [ 0 -eq ${i} ]; then
+	k_log_error "No Kerrighed kernel found"
+	exit 1
+    elif [ 1 -eq ${#krg_versions[@]} -o ! "${interactive}" ]; then
+	# Choose first version (should be more recent)
+	version=${versions[0]}
+    else
+	# Let the user choose
+	echo -ne "Available Kerrighed kernels:\n"
+	j=0
+	while [ ${i} -ne ${j} ]; do
+	    echo -ne "\t[${j}] ${versions[${j}]}\n"
+	    j=$(( j+1 ))
+	done
+	local uinput=
+	while [ -z "${uinput}" ]; do
+	    read -p "Choose kernel number: " uinput
+	    if ! echo ${uinput} | egrep -q '[0-9]+'; then
+		echo "Incorrect value"
+		uinput=
+	    elif [ 0 -gt ${uinput} -o ${i} -le ${uinput} ]; then
+		echo "Value out of range"		
+		uinput=
+	    fi
+	done
+	version=${versions[${uinput}]}
+    fi
+    k_log "Using Kerrighed kernel ${version}\n"
+
+    cat > /etc/kerrighed/pxelinux.conf <<EOF
+kernel=/boot/vmlinuz-${version}
+initrd=${tftp_dir}/initrd.img-${version}
+#nfsif=eth0
+nfsrootopts=rsize=4096,wsize=4096
+EOF
+
+    k_make_initrd ${version}
 }

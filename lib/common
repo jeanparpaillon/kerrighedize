@@ -110,7 +110,7 @@ function k_load_var
 	fi
 
 	# Save value
-	echo "${name} $(eval echo $${name})" >> ${k_valuesoutput_tmp}
+	echo "${name} $(eval echo \$${name})" >> ${k_valuesoutput_tmp}
     fi
     eval export ${name}="\$${name}"
 }
