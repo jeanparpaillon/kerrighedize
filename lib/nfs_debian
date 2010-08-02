@@ -1,0 +1,30 @@
+#!/bin/bash -e
+#
+# nfs functions 
+nfs_packages=nfs-kernel-server
+
+k_load_var global_nb_nodes
+
+function k_configure_nfs_distro
+{
+    update-rc.d -f nfs-kernel-server remove
+
+    cat > /etc/kerrighed/nfs-server.conf <<EOF
+# Options for rpc.statd.
+STATDOPTS=
+
+# Number of servers to start up
+RPCNFSDCOUNT=${global_nb_nodes}
+
+# Runtime priority of server (see nice(1))
+RPCNFSDPRIORITY=0
+
+# Options for rpc.mountd.
+# If you have a port-based firewall, you might want to set up
+# a fixed port here using the --port option. For more information, 
+# see rpc.mountd(8) or http://wiki.debian.org/?SecuringNFS
+RPCMOUNTDOPTS=--manage-gids
+
+EXPORTOPTS="rw,sync,no_subtree_check,no_root_squash"
+EOF
+}

@@ -1,0 +1,123 @@
+#!/bin/bash -e
+# -------
+# File:          kerrighedize
+# Description:   makes the machine a master node for Kerrighed cluster
+# Author:        Jean Parpaillon <jean.parpaillon@kerlabs.com>
+# Copyright:     (c) 2010 Jean Parpaillon <jean.parpaillon@kerlabs.com>
+#
+trap k_clean ERR
+
+basedir=$(dirname $0)
+libdir=${basedir}/lib
+
+export k_valuesoutput_tmp=$(mktemp)
+export k_value
+
+function k_clean
+{
+    rm -f ${k_valuesoutput_tmp}
+}
+
+#
+# Load a module
+#
+function k_load
+{
+    if [ -z "$1" ]
+    then
+	echo "k_load(): missing argument"
+	exit 1
+    fi
+	
+    module=$1
+    echo -n "Loading module $module... "
+
+    if [ -f /etc/debian_version ]
+    then
+	distro=debian
+    fi
+
+    ret=1
+    for file in ${module} ${module}_${distro}
+    do
+	if [ -e ${libdir}/${file} ]
+	then
+	    . ${libdir}/${file}
+	    ret=0
+	fi
+    done
+
+    if [ "${ret}" -eq "1" ]
+    then
+	echo "k_load(): no such module in ${libdir}: ${module}"
+    else
+	echo "done."
+    fi
+
+    return $ret
+}
+
+function usage
+{
+    echo "Usage: $0 [-h] [-I] [-i default.in] [-o default.out]"
+    echo "  -h   : print this help"
+    echo "  -I   : always ask questions"
+    echo "  -i   : load variables value from this file"
+    echo "  -o   : write values to this file for further deployment"
+}
+
+export interactive=
+export valueinput=
+export valueoutput=
+while getopts  "hIi:o:" flag
+do
+    case $flag in
+	h)
+	    usage
+	    exit 0
+	    ;;
+	I)
+	    interactive=1
+	    ;;
+	i)
+	    valueinput=$OPTARG
+	    if [ ! -e "${valueinput}" ]
+	    then
+		echo "File not found: ${valueinput}"
+		exit 1
+	    fi
+	    ;;
+	o)
+	    valuesoutput=$OPTARG
+	    ;;
+	*)
+	    usage
+	    exit 1
+	    ;;
+    esac
+done
+
+# Load modules
+k_load log
+k_load misc
+k_load install
+k_load packages
+k_load nfs
+k_load tftp
+k_load pxe
+
+# Run steps
+k_check_root
+k_step_install
+k_step_nfsserver
+k_step_tftp
+k_step_pxe
+
+# Cleanup
+if [ -n "${valuesoutput}" ]
+then
+    cp ${k_valuesoutput_tmp} ${valuesoutput}
+fi
+k_clean
+
+exit 0

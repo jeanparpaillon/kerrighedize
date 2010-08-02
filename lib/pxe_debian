@@ -1,0 +1,11 @@
+#!/bin/bash -e
+#
+# PXE functions (Debian implementation)
+pxe_packages=syslinux
+
+k_load_var tftp_dir
+
+function k_configure_pxe_distro
+{
+    ln -s /usr/lib/syslinux/pxelinux.0 ${tftp_dir}/pxelinux.0
+}

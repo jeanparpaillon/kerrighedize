@@ -1,0 +1,20 @@
+#!/bin/bash -e
+#
+# tftp functions (Debian implementation)
+tftp_packages=atftpd
+
+function k_configure_tftp_distro
+{
+    update-rc.d -f atftp remove
+
+    k_load_var tftp_dir
+    cat >> /etc/default/atftpd <<EOF
+USE_INETD=false
+OPTIONS="--tftpd-timeout 300 --retry-timeout 5 --mcast-port 1758 --mcast-addr 239.239.239.0-255 --mcast-ttl 1 --maxthread 100 --verbose=5 ${tftp_dir}"
+EOF
+
+    if which update-inetd > /dev/null
+    then
+	update-inetd --disable tftp
+    fi
+}

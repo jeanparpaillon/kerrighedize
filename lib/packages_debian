@@ -1,0 +1,42 @@
+#!/bin/bash -e
+#
+# packages manipulation functions 
+
+function k_check_package
+{
+    if [ -z "${1:-}" ]
+    then
+	echo "k_check_package: missing argument"
+	exit 1
+    fi
+    pkg=$1
+    k_log_progress "Check for package $pkg"
+    if dpkg -l $pkg | grep -q '^ii'; then
+	k_log_success
+	return 0
+    else
+	k_log_error
+	return 1
+    fi
+}
+
+function k_install_package
+{
+    if [ -z "${1:-}" ]
+    then
+	echo "k_install_package: missing argument"
+	exit 1
+    fi
+    pkg=$1
+    k_log_progress  "Install $pkg"
+    apt-get install --quiet --yes $pkg > /dev/null
+    return $?
+}
+
+k_log_progress "update package list"
+apt-get --quiet --yes update > /dev/null
+if [ 0 -ne $? ]
+then
+    k_log_error
+    exit 1
+fi

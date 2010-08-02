@@ -1,0 +1,27 @@
+#!/bin/bash -e
+#
+# install functions
+
+distdir=${basedir}/dist
+
+function k_step_install
+{
+    if [ -z "${basedir}" ]
+    then
+	echo "k_step_install: undefined \$basedir"
+	exit 1
+    fi
+
+    ret=0
+    k_log_progress "Install scripts"
+    rsync -qa ${distdir}/ /
+    if [ 0 -eq $? ]
+    then
+	k_log_success
+    else
+	k_log_error
+	ret=1
+    fi
+
+    return $ret
+}

@@ -1,0 +1,78 @@
+#!/bin/bash -e
+#
+# log functions 
+#
+function k_log_use_fancy_output
+{
+    TPUT=/usr/bin/tput
+    EXPR=/usr/bin/expr
+    if [ -t 1 ] && [ "x${TERM:-}" != "x" ] && [ "x${TERM:-}" != "xdumb" ] && [ -x $TPUT ] && [ -x $EXPR ] && $TPUT hpa 60 >/dev/null 2>&1 && $TPUT setaf 1 >/dev/null 2>&1
+    then
+        [ -z $FANCYTTY ] && FANCYTTY=1 || true
+    else
+        FANCYTTY=0
+    fi
+    case "$FANCYTTY" in
+        1|Y|yes|true)   true;;
+        *)              false;;
+    esac
+}
+
+function k_log
+{
+    echo -ne "$@"
+}
+
+function k_log_end
+{
+    # If no arguments were passed, return
+    if [ -z "${1:-}" ]; then
+        return 1
+    fi
+
+    retval=$1
+
+    # Only do the fancy stuff if we have an appropriate terminal
+    # and if /usr is already mounted
+    if k_log_use_fancy_output
+    then
+        RED=`$TPUT setaf 1`
+        GREEN=`$TPUT setaf 2`
+        NORMAL=`$TPUT op`
+    else
+        RED=''
+        GREEN=''
+        NORMAL=''
+    fi
+
+    if [ $1 -eq 0 ]
+    then
+        /bin/echo -e " ${GREEN}ok${NORMAL}"
+    else
+        /bin/echo -e " ${RED}failed!${NORMAL}"
+    fi
+    return $retval
+}
+
+function k_log_progress
+{
+    k_log "$@... "
+}
+
+function k_log_success
+{
+    if [ -n "${1:-}" ]
+    then
+        k_log "$@: "
+    fi
+    k_log_end 0
+}
+
+function k_log_error
+{
+    if [ -n "${1:-}" ]
+    then
+        k_log "$@: "
+    fi
+    k_log_end 1
+}

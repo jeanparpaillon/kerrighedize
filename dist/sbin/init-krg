@@ -1,0 +1,141 @@
+#!/bin/sh
+#
+# Copyright (c) 2009-2010 Kerlabs
+#
+# Author: Jean Parpaillon <jean.parpaillon@kerlabs.com>
+#
+
+set -e
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+CFG=/etc/default/kerrighed-host
+SYS_DIR=/sys/kerrighed/hotplug
+
+# Load logger functions
+. /lib/lsb/init-functions
+
+d_set_isolate_ns() {
+    case "x$1" in
+        xtrue)
+            echo 1 > $SYS_DIR/$2 || STATUS=1
+            ;;
+        xfalse)
+            echo 0 > $SYS_DIR/$2 || STATUS=1
+            ;;
+        x)
+            ;;
+        *)
+            log_progress_msg "value of ISOLATE_xxx in $CFG must be either 'true' or 'false'"
+	    STATUS=1
+            ;;
+    esac
+
+    return ${STATUS:-0}
+}
+
+run_scripts() {
+    local action=$1
+    local dir=/etc/kerrighed
+    if [ "$(cat /sys/kerrighed/node_id)" = "$BOOT_ID" ]; then
+	dir=$dir/rcmaster
+    else
+	dir=$dir/rcnode
+    fi
+    dir=$dir/${action}.d
+
+    log_success_msg "Begin scripts in $dir"
+    if [ -d $dir ]; then
+	run-parts --lsbsysinit --regex 'S.*' --arg=start $dir || true
+	run-parts --lsbsysinit --regex 'K.*' --arg=stop $dir || true
+    fi
+    log_success_msg "End scripts in $dir"
+}
+
+INIT=
+for bin in /sbin/init /etc/init /bin/init /bin/sh; do
+    if [ -x $bin ]; then
+	INIT=$bin
+	break
+    fi
+done
+if [ -z "$INIT" ]; then
+    echo "Missing init"
+    exit 1
+fi
+
+if [ ! -d /sys/kerrighed ]; then
+    echo "init-krg: no support for Kerrighed in kernel. Doing normal boot..."
+    exec $INIT
+fi
+
+# Setup Kerrighed host
+log_begin_msg "Load Kerrighed configuration"
+if [ -e $CFG ]; then
+    . $CFG
+    log_end_msg 0
+else
+    log_end_msg 1
+fi
+
+log_begin_msg "Setup Kerrighed isolations level"
+d_set_isolate_ns "$ISOLATE_UTS" isolate_uts
+d_set_isolate_ns "$ISOLATE_MNT" isolate_mnt
+d_set_isolate_ns "$ISOLATE_NET" isolate_net
+d_set_isolate_ns "$ISOLATE_USER" isolate_user
+log_end_msg 0
+
+log_begin_msg "Setup Kerrighed init"
+echo -n $CLUSTER_INIT_HELPER > /sys/kerrighed/hotplug/cluster_init_helper
+log_end_msg 0
+
+log_begin_msg "Setup Kerrighed network devices"
+for dev in $NET_DEVICES; do
+    echo $dev > /sys/kerrighed/net_devices
+done
+log_end_msg 0
+
+# Give precedence to boot paramater for boot_id
+for word in $(cat /proc/cmdline ); do
+    if echo $word | grep -q '^boot_id='; then
+	BOOT_ID=$(echo $word | cut -f2 -d'=')
+    fi
+done
+
+run_scripts start
+if [ "$(cat /sys/kerrighed/node_id)" = "$BOOT_ID" ]; then
+    # Start Kerrighed container on BOOT_ID node
+    ISOLATE_UTS=`cat $SYS_DIR/isolate_uts`
+    ISOLATE_IPC=`cat $SYS_DIR/isolate_ipc`
+    ISOLATE_MNT=`cat $SYS_DIR/isolate_mnt`
+    ISOLATE_PID=`cat $SYS_DIR/isolate_pid`
+    ISOLATE_NET=`cat $SYS_DIR/isolate_net`
+    ISOLATE_USER=`cat $SYS_DIR/isolate_user`
+
+    NS_ARGS=
+    if [ "$ISOLATE_UTS" -ne 0 ]; then
+	NS_ARGS="$NS_ARGS -u"
+    fi
+    if [ "$ISOLATE_IPC" -ne 0 ]; then
+	NS_ARGS="$NS_ARGS -i"
+    fi
+    if [ "$ISOLATE_MNT" -ne 0 ]; then
+	NS_ARGS="$NS_ARGS -m"
+    fi
+    if [ "$ISOLATE_PID" -ne 0 ]; then
+	NS_ARGS="$NS_ARGS -p"
+    fi
+    if [ "$ISOLATE_NET" -ne 0 ]; then
+	NS_ARGS="$NS_ARGS -n"
+    fi
+    if [ "$ISOLATE_USER" -ne 0 ]; then
+	NS_ARGS="$NS_ARGS -U"
+    fi
+
+    log_success_msg "Launch Kerrighed container"
+    /usr/sbin/krgboot $NS_ARGS -- /usr/sbin/krginit_helper /sbin/init
+fi
+
+while true; do
+    wait
+    sleep 1
+done

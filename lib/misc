@@ -1,0 +1,116 @@
+#!/bin/bash -e
+#
+# misc functions 
+dft_valueinput=${basedir}/var/vars.default
+dft_msg=${basedir}/var/vars.msg
+
+valueinput=${valueinput:-${dft_valueinput}}
+
+function k_check_root
+{
+    k_log_progress "Check if user is root"
+    if [ 0 -ne $(id -u) ]
+    then
+	k_log_error
+	exit 1
+    else
+	k_log_success
+    fi
+}
+
+function k_load_var_saved
+{
+    k_load_var_file ${k_valuesoutput_tmp} ${1}
+}
+
+function k_load_var_default
+{
+    k_load_var_file ${valueinput} ${1}
+}
+
+function k_load_var_file
+{
+    if [ -z "${1}" -a -z "${2}" ]
+    then
+	echo "k_load_var_file: missing argument" >&2
+	exit 1
+    fi
+    local file=${1}
+    local name=${2}
+    local value
+    
+    if [ -e ${file} ]
+    then
+	value=$(awk '/^'${name}' / { print $2 }' ${file})
+	eval export ${name}=\"${value}\"
+    fi
+}
+
+function k_load_var_user
+{
+    if [ -z "${1}" ]
+    then
+	echo "k_load_var_user: missing argument" >&2
+	exit 1
+    fi
+    local name=${1}
+    local value
+    local msg=$(k_var_message ${name})
+    read -e -p "${msg}> " value
+    eval export ${name}=\"${value}\"
+}
+
+function k_var_message
+{
+    if [ -z "${1}" ]
+    then
+	echo "k_var_message: missing argument" >&2
+	exit 1
+    fi
+    local name=${1}
+    local msg=
+
+    if [ -e ${dft_msg} ]
+    then
+	msg=$(sed '/^'${name}' /!d; s/^'${name}' //' ${dft_msg})
+    else
+	echo "k_var_message: missing file ${dft_msg}" >&2
+	exit 1
+    fi
+
+    if [ -z "${msg}" ]
+    then
+	echo "k_var_message: unknown variable ${name}" >&2
+	exit 1
+    fi
+
+    echo ${msg}
+}
+
+function k_load_var
+{
+    if [ -z "${1}" ]
+    then
+	echo "k_load_var: missing argument" >&2
+	exit 1
+    fi
+    local name=${1}
+
+    k_load_var_saved ${name}
+    if [ -z "$(eval echo \$${name})" ]
+    then
+	if [ ! ${interactive} ]
+	then
+	    k_load_var_default ${name}
+	fi
+	
+	if [ -z "$(eval echo \$${name})" ]
+	then
+	    k_load_var_user ${name}
+	fi
+
+	# Save value
+	echo "${name} $(eval echo $${name})" >> ${k_valuesoutput_tmp}
+    fi
+    eval export ${name}="\$${name}"
+}

@@ -1,0 +1,29 @@
+#!/bin/bash -e
+#
+# PXE functions 
+function k_step_pxe
+{
+    if [ -n "${pxe_packages}" ]; then
+	if ! k_check_package ${pxe_packages}; then
+	    k_install_package ${pxe_packages}
+	fi
+    fi
+    k_configure_pxe_distro
+    k_configure_pxe
+}
+
+function k_configure_pxe_distro
+{
+    k_log_progress "k_configure_pxe_distro(): not implemented"
+    k_log_error
+    exit 1
+}
+
+function k_configure_pxe
+{
+    mkdir -p ${tftp_dir}/pxelinux.cfg
+
+    # /etc/kerrighed/rcmaster/start.d
+    level=/etc/kerrighed/rcmaster/start.d
+    ln -fs ../../init.d/pxelinux ${level}/S99pxelinux
+}

@@ -1,0 +1,8 @@
+#!/bin/bash -e
+#
+# for testing module loading mechanism
+
+function k_test_distro
+{
+    echo "k_test_distro: debian"
+}

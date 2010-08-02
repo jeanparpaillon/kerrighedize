@@ -1,0 +1,2 @@
+global_nb_nodes 16
+tftp_dir /srv/tftp

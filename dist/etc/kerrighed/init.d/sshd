@@ -1,0 +1,110 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          ssh
+# Required-Start:    $remote_fs
+# Required-Stop:     $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: SSH server
+# Description:       Run ssh server in Kerrighed host
+### END INIT INFO
+
+# Author: Jean Parpaillon <jean.parpaillon@kerlabs.com>
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="Service SSH server"
+NAME=sshd
+SCRIPTNAME=/etc/kerrighed/init.d/$NAME
+
+# Read configuration variable file if it is present
+[ -r /etc/kerrighed/$NAME.conf ] && . /etc/kerrighed/$NAME.conf
+
+[ -x /usr/sbin/$NAME ] || exit 0
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
+. /lib/lsb/init-functions
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+    case x$ENABLE in
+	xtrue)
+	    SSHD_OPTS=${SSHD_OPTS:-"-p 2222"}
+	    /usr/sbin/sshd $SSHD_OPTS
+	    STATUS=$?
+	    PORT=$(netstat -ltpn --inet | awk '/sshd/ { print $4 }' | cut -d':' -f2 | head -1)
+	    ;;
+	xfalse)
+	    log_progress_msg "disabled in /etc/kerrighed/$NAME.conf"
+	    STATUS=0
+	    ;;
+	*)
+	    log_progress_msg "ENABLE must be true or false"
+	    STATUS=1
+	    ;;
+    esac
+
+    return ${STATUS:-0}
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+    return 0
+}
+
+#
+# Function that sends a SIGHUP to the daemon/service
+#
+do_reload() {
+	return 0
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting $DESC"
+	do_start
+	log_end_msg $?
+	if [ -n "$PORT" ]; then
+	    log_success_msg "Kerrighed root container can be accessed through ssh on port $PORT"
+	fi
+	;;
+  stop)
+	log_daemon_msg "Stopping $DESC"
+	do_stop
+	log_end_msg $?
+	;;
+  restart|force-reload)
+	log_daemon_msg "Restarting $DESC"
+	do_stop
+	case "$?" in
+	  0|1)
+		do_start
+		case "$?" in
+			0) log_end_msg 0 ;;
+			1) log_end_msg 1 ;; # Old process is still running
+			*) log_end_msg 1 ;; # Failed to start
+		esac
+		;;
+	  *)
+	  	# Failed to stop
+		log_end_msg 1
+		;;
+	esac
+	;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload}" >&2
+	exit 3
+	;;
+esac
+
+:

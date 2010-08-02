@@ -1,0 +1,68 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          halt-krg
+# Required-Start:
+# Required-Stop:
+# Should-Stop:       halt
+# Default-Start:
+# Default-Stop:      0
+# Short-Description: Execute the krgadm cluster poweroff command.
+# Description:
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+. /lib/lsb/init-functions
+
+# Gracefully exit if not running a Kerrighed kernel
+[ -e /sys/kerrighed/node_id ] || exit 0
+
+do_stop () {
+	if [ "$INIT_HALT" = "" ]
+	then
+		case "$HALT" in
+		  [Pp]*)
+			INIT_HALT=POWEROFF
+			;;
+		  [Hh]*)
+			INIT_HALT=HALT
+			;;
+		  *)
+			INIT_HALT=POWEROFF
+			;;
+		esac
+	fi
+
+	# See if we need to cut the power.
+	if [ "$INIT_HALT" = "POWEROFF" ] && [ -x /etc/init.d/ups-monitor ]
+	then
+		/etc/init.d/ups-monitor poweroff
+	fi
+
+	log_action_msg "Will now halt the cluster"
+	krgadm cluster poweroff
+
+	# Do not return to not run the regular halt
+	while true; do
+	    sleep 1
+	done
+}
+
+case "$1" in
+  start)
+	# No-op
+	;;
+  restart|reload|force-reload)
+	echo "Error: argument '$1' not supported" >&2
+	exit 3
+	;;
+  stop)
+	do_stop
+	;;
+  *)
+	echo "Usage: $0 start|stop" >&2
+	exit 3
+	;;
+esac
+
+:

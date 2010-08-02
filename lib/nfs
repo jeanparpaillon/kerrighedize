@@ -1,0 +1,37 @@
+#!/bin/bash -e
+#
+# nfs functions 
+function k_step_nfsserver
+{
+    if ! k_check_package ${nfs_packages}
+    then
+	k_install_package ${nfs_packages}
+    fi
+    k_configure_nfs_distro
+    k_configure_nfs
+}
+
+function k_configure_nfs_distro
+{
+    k_log_progress "k_configure_nfs_distro(): not implemented"
+    k_log_error
+    exit 1
+}
+
+function k_configure_nfs
+{
+    # /etc/kerrighed/rcmaster/start.d
+    level=/etc/kerrighed/rcmaster/start.d
+    ln -fs ../../../init.d/portmap ${level}/S14portmap
+    ln -fs ../../init.d/nfs-server ${level}/S15nfs-server
+
+    # /etc/kerrighed/rcmaster/halt.d
+    level=/etc/kerrighed/rcmaster/halt.d
+    ln -fs ../../../init.d/portmap ${level}/K15portmap
+    ln -fs ../../init.d/nfs-server ${level}/K14nfs-server
+    
+    # /etc/kerrighed/rcmaster/reboot.d
+    level=/etc/kerrighed/rcmaster/reboot.d
+    ln -fs ../../../init.d/portmap ${level}/K15portmap
+    ln -fs ../../init.d/nfs-server ${level}/K14nfs-server
+}
