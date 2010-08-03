@@ -12,6 +12,6 @@ function k_misc_master_distro
     # Install Kerrighed specififc halt and reboot init scripts
     # They are run just before the respective original scripts
     # to prevent them to be run in case of Kerrighed cluster.
-    udpate-rc.d halt-krg defaults
+    update-rc.d halt-krg defaults
     update-rc.d reboot-krg defaults
 }
