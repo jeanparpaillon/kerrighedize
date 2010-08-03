@@ -1,8 +1,32 @@
 #!/bin/bash -e
 #
 # install functions
+scripts="\
+	usr/sbin/boottool sbin/init-krg \
+	etc/grub.d/11_kerrighed \
+	etc/init.d/reboot-krg etc/init.d/halt-krg etc/init.d/krgnfsroot \
+	etc/kerrighed/init.d/pxelinux etc/kerrighed/init.d/nfs-server \
+	etc/kerrighed/init.d/sshd etc/kerrighed/init.d/hostname.sh \
+	etc/kerrighed/init.d/network\
+"
+datas="\
+        etc/default/krgnfsroot \
+	etc/kerrighed/nfs-server.conf etc/kerrighed/pxelinux.conf \
+	etc/kerrighed/sshd.conf etc/kerrighed/network.conf \
+"
+dirs="\
+        etc/kerrighed/rcmaster/start.d \
+        etc/kerrighed/rcmaster/halt.d \
+        etc/kerrighed/rcmaster/reboot.d \
+        etc/kerrighed/rcnode/start.d \
+        etc/kerrighed/rcnode/halt.d \
+        etc/kerrighed/rcnode/reboot.d \
+"
 
 distdir=${basedir}/dist
+install_scripts="install -D -m 755 -o root -g root"
+install_data="install -D -m 644 -o root -g root"
+install_dir="install -m 755 -o root -g root -d"
 
 function k_step_install
 {
@@ -13,15 +37,22 @@ function k_step_install
     fi
 
     ret=0
-    k_log_progress "Install scripts"
-    rsync -qa ${distdir}/ /
-    if [ 0 -eq $? ]
-    then
-	k_log_success
-    else
-	k_log_error
-	ret=1
-    fi
+    k_log "Install files...\n"
+    for file in ${scripts}; do
+	k_log "\tscript: ${file}\n"
+	${install_scripts} ${distdir}/${file} /${file}
+	[ 0 -eq $? ] || return 1
+    done
+    for file in ${datas}; do
+	k_log "\tdata: ${file}\n"
+	${install_data} ${distdir}/${file} /${file}
+	[ 0 -eq $? ] || return 1
+    done
+    for dir in ${dirs}; do
+	k_log "\tdir: ${dir}\n"
+	${install_dir} /${dir}
+	[ 0 -eq $? ] || return 1
+    done
 
     return $ret
 }
