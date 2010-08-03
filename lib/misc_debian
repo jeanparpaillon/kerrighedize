@@ -7,4 +7,10 @@ function k_misc_master_distro
     level=/etc/kerrighed/rcmaster/start.d
     ln -fs ../../../init.d/mountkernfs.sh ${level}/S01mountkernfs.sh
     ln -fs ../../../init.d/checkroot.sh ${level}/S07checkroot.sh
+
+    # Install Kerrighed specififc halt and reboot init scripts
+    # They are run just before the respective original scripts
+    # to prevent them to be run in case of Kerrighed cluster.
+    udpate-rc.d halt-krg defaults
+    update-rc.d reboot-krg defaults
 }
