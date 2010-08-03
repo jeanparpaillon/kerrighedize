@@ -7,12 +7,12 @@
 #
 trap k_clean ERR
 
-basedir=$(dirname $0)
-libdir=${basedir}/lib
-tftp_dir=/srv/tftp
+export basedir=$(dirname $0)
+export libdir=${basedir}/lib
+export tftp_dir=/srv/tftp
+export kernel_version=
 
 export k_valuesoutput_tmp=$(mktemp)
-export k_value
 
 function k_clean
 {

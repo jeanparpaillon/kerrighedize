@@ -36,9 +36,16 @@ function k_check_kernel
     v=${1}
     ret=0
     k_log_progress "Check kernel ${v}"
-    ! ( [ -e /boot/config-${v} ] && grep -q "^CONFIG_KERRIGHED=y" /boot/config-${v} ) && ret=1
+    if [ -e /boot/config-${v} ]; then
+	grep -q "^CONFIG_KERRIGHED=y" /boot/config-${v} || ret=1
+	# Could be optional if /etc/kerrighed/pxelinux script
+	# would generate boot files with node_id
+	grep -q "^CONFIG_AUTONODEID=y" /boot/config-${v} || ret=1
+    else
+	ret=1
+    fi
     [ ! -d /lib/modules/${v} ] && ret=1
-    
+
     if [ 0 -eq ${ret} ]; then
 	k_log_success
     else
@@ -67,13 +74,15 @@ function k_configure_pxe
     done
     k_log "\n"
 
-    version=
     if [ 0 -eq ${i} ]; then
 	k_log_error "No Kerrighed kernel found"
+	k_log "Kernel config must contain:\n"
+	k_log "\tCONFIG_KERRIGHED=y\n"
+	k_log "\tCONFIG_AUTONODEID=y\n"
 	exit 1
     elif [ 1 -eq ${#krg_versions[@]} -o ! "${interactive}" ]; then
 	# Choose first version (should be more recent)
-	version=${versions[0]}
+	kernel_version=${versions[0]}
     else
 	# Let the user choose
 	echo -ne "Available Kerrighed kernels:\n"
@@ -93,16 +102,16 @@ function k_configure_pxe
 		uinput=
 	    fi
 	done
-	version=${versions[${uinput}]}
+	kernel_version=${versions[${uinput}]}
     fi
     k_log "Using Kerrighed kernel ${version}\n"
 
     cat > /etc/kerrighed/pxelinux.conf <<EOF
-kernel=/boot/vmlinuz-${version}
-initrd=${tftp_dir}/initrd.img-${version}
+kernel=/boot/vmlinuz-${kernel_version}
+initrd=${tftp_dir}/initrd.img-${kernel_version}
 #nfsif=eth0
 nfsrootopts=rsize=4096,wsize=4096
 EOF
 
-    k_make_initrd ${version}
+    k_make_initrd ${kernel_version}
 }
