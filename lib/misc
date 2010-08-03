@@ -4,7 +4,6 @@
 function k_step_misc
 {
     k_misc_master
-    k_misc_node
 }
 
 function k_misc_master
@@ -28,18 +27,6 @@ function k_misc_master
 function k_misc_master_distro
 {
     k_log_progress "k_misc_master_distro(): not implemented"
-    k_log_error
-    exit 1
-}
-
-function k_misc_node
-{
-    true
-}
-
-function k_misc_node_distro
-{
-    k_log_progress "k_node_distro(): not implemented"
     k_log_error
     exit 1
 }
