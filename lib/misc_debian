@@ -8,6 +8,7 @@ function k_misc_master_distro
     ln -fs ../../../init.d/mountkernfs.sh ${level}/S01mountkernfs.sh
     ln -fs ../../../init.d/checkroot.sh ${level}/S07checkroot.sh
 
+    update-rc.d krgnfsroot defaults
     # Install Kerrighed specififc halt and reboot init scripts
     # They are run just before the respective original scripts
     # to prevent them to be run in case of Kerrighed cluster.
