@@ -51,6 +51,13 @@ run_scripts() {
     log_success_msg "End scripts in $dir"
 }
 
+if pidof init > /dev/null; then
+    echo "'init' is already running. Exiting..."
+    echo "This program is intended to be run as a replacement for init, on Kerrighed systems."
+    echo "Add to your bootloader the boot parameter 'init=$(dirname $0)/init-krg'"
+    exit 1
+fi
+
 INIT=
 for bin in /sbin/init /etc/init /bin/init /bin/sh; do
     if [ -x $bin ]; then
