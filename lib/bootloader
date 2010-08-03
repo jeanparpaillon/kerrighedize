@@ -1,0 +1,27 @@
+#!/bin/bash -e
+#
+# bootloader functions 
+function k_step_bootloader
+{
+    if which grub-mkconfig > /dev/null; then
+	# Should be GRUB2
+	k_bootloader_grub2
+    else
+	# Other should be handled correctly by boottool
+	k_bootloader_boottool
+    fi
+}
+
+function k_bootloader_grub2
+{
+    k_log_progress "k_bootloader_grub2(): not implemented"
+    k_log_error
+    exit 1    
+}
+
+function k_bootloader_boottool
+{
+    k_log_progress "k_bootloader_boottool(): not implemented"
+    k_log_error
+    exit 1
+}

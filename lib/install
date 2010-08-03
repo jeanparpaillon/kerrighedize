@@ -3,7 +3,7 @@
 # install functions
 scripts="\
 	usr/sbin/boottool sbin/init-krg \
-	etc/grub.d/11_kerrighed \
+	etc/grub.d/09_kerrighed \
 	etc/init.d/reboot-krg etc/init.d/halt-krg etc/init.d/krgnfsroot \
 	etc/kerrighed/init.d/pxelinux etc/kerrighed/init.d/nfs-server \
 	etc/kerrighed/init.d/sshd etc/kerrighed/init.d/hostname.sh \
