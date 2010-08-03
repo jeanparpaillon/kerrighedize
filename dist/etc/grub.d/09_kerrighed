@@ -126,12 +126,12 @@ while [ "x$list" != "x" ] ; do
     linux_root_device_thisversion=${GRUB_DEVICE}
   fi
 
-  #kerrighed_entry "${OS}" "${version}" false \
-  #    "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT} ${KERRIGHED_CMDLINE}"
-  #if [ "x${GRUB_DISABLE_LINUX_RECOVERY}" != "xtrue" ]; then
-  #    kerrighed_entry "${OS}" "${version}" true \
-#	  "single ${GRUB_CMDLINE_LINUX} ${KERRIGHED_CMDLINE}"
-#  fi
+  kerrighed_entry "${OS}" "${version}" false \
+      "${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT} ${KERRIGHED_CMDLINE}"
+  if [ "x${GRUB_DISABLE_LINUX_RECOVERY}" != "xtrue" ]; then
+      kerrighed_entry "${OS}" "${version}" true \
+	  "single ${GRUB_CMDLINE_LINUX} ${KERRIGHED_CMDLINE}"
+  fi
 
   list=`echo $list | tr ' ' '\n' | grep -vx $linux | tr '\n' ' '`
 done
