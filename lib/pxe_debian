@@ -31,7 +31,8 @@ DEVICE=
 NFSROOT=auto
 EOF
 
-    mv /etc/initramfs-tools/initramfs.conf /etc/initramfs-tools/initramfs.conf.local
+    [ -e /etc/initramfs-tools/initramfs.conf.local ] || \
+	mv /etc/initramfs-tools/initramfs.conf /etc/initramfs-tools/initramfs.conf.local
     ln -fs initramfs.conf.nfs /etc/initramfs-tools/initramfs.conf
     update-initramfs -k ${v} -b ${tftp_dir} -d > /dev/null
     update-initramfs -k ${v} -b ${tftp_dir} -c > /dev/null
