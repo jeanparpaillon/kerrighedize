@@ -40,7 +40,7 @@ function k_check_kernel
 	grep -q "^CONFIG_KERRIGHED=y" /boot/config-${v} || ret=1
 	# Could be optional if /etc/kerrighed/pxelinux script
 	# would generate boot files with node_id
-	grep -q "^CONFIG_AUTONODEID=y" /boot/config-${v} || ret=1
+	grep -q "^CONFIG_KRG_AUTONODEID=y" /boot/config-${v} || ret=1
     else
 	ret=1
     fi
@@ -104,7 +104,7 @@ function k_configure_pxe
 	done
 	kernel_version=${versions[${uinput}]}
     fi
-    k_log "Using Kerrighed kernel ${version}\n"
+    k_log "Using Kerrighed kernel ${kernel_version}\n"
 
     cat > /etc/kerrighed/pxelinux.conf <<EOF
 kernel=/boot/vmlinuz-${kernel_version}
