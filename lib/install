@@ -44,12 +44,12 @@ function k_step_install
 	[ 0 -eq $? ] || return 1
     done
     for file in ${datas}; do
-	k_log "\tdata: ${file}\n"
+	k_log "\tdata  : ${file}\n"
 	${install_data} ${distdir}/${file} /${file}
 	[ 0 -eq $? ] || return 1
     done
     for dir in ${dirs}; do
-	k_log "\tdir: ${dir}\n"
+	k_log "\tdir   : ${dir}\n"
 	${install_dir} /${dir}
 	[ 0 -eq $? ] || return 1
     done
