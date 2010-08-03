@@ -2,8 +2,9 @@
 ### BEGIN INIT INFO
 # Provides:          reboot-krg
 # Required-Start:
-# Required-Stop:
-# Should-Stop:       reboot
+# Required-Stop:     reboot
+# Should-Stop:
+# X-Stop-After:      umountroot
 # Default-Start:
 # Default-Stop:      6
 # Short-Description: Execute the reboot command.

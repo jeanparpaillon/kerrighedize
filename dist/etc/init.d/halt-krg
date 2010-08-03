@@ -2,8 +2,9 @@
 ### BEGIN INIT INFO
 # Provides:          halt-krg
 # Required-Start:
-# Required-Stop:
-# Should-Stop:       halt
+# Required-Stop:     halt
+# Should-Stop:
+# X-Stop-After:      umountroot
 # Default-Start:
 # Default-Stop:      0
 # Short-Description: Execute the krgadm cluster poweroff command.
