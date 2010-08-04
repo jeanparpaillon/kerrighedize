@@ -12,12 +12,16 @@ bindir=${exec_prefix}/bin
 libdir=${exec_prefix}/lib
 . ${libdir}/grub/grub-mkconfig_lib
 
+GRUB_KERRIGHED_CONF=/etc/kerrighed/bootparams.conf
+
 export TEXTDOMAIN=grub
 export TEXTDOMAINDIR=${prefix}/share/locale
 
 CLASS="--class gnu-linux --class gnu --class os"
-KERRIGHED_CMDLINE="session_id=1 autonodeid=1 init=/sbin/init-krg ip=dhcp"
 OS="Kerrighed"
+if [ -e ${GRUB_KERRIGHED_CONF} ]; then
+    KERRIGHED_CMDLINE=`cat ${GRUB_KERRIGHED_CONF}`
+fi
 
 if [ ! "x${GRUB_DISTRIBUTOR}" = "x" ] ; then
   CLASS="--class $(echo ${GRUB_DISTRIBUTOR} | tr '[A-Z]' '[a-z]' | cut -d' ' -f1) ${CLASS}"

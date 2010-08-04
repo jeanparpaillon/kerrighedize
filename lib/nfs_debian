@@ -7,7 +7,8 @@ k_load_var global_nb_nodes
 
 function k_configure_nfs_distro
 {
-    update-rc.d -f nfs-kernel-server remove
+    k_log_progress "Setup NFS config"
+    update-rc.d -f nfs-kernel-server remove > /dev/null
 
     cat > /etc/kerrighed/nfs-server.conf <<EOF
 # Options for rpc.statd.
@@ -27,4 +28,5 @@ RPCMOUNTDOPTS=--manage-gids
 
 EXPORTOPTS="rw,sync,no_subtree_check,no_root_squash"
 EOF
+    k_log_success
 }

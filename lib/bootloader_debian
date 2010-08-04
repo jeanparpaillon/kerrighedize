@@ -3,10 +3,34 @@
 # bootloader functions (Debian)
 function k_bootloader_grub2
 {
-    [ -e /etc/default/grub.krg-bak ] || mv /etc/default/grub /etc/default/grub.krg-bak
-    cat /etc/default/grub.krg-bak | sed -e 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT="Kerrighed '$kernel_version'"/' > /etc/default/grub
+    k_log_progress "Creating initramfs for local boot (${kernel_version})"
+    cat > /etc/initramfs-tools/initramfs.conf.local <<EOF
+MODULES=most
+BUSYBOX=y
+KEYMAP=n
+COMPRESS=gzip
+BOOT=local
+DEVICE=
+NFSROOT=auto
+EOF
+
+    [ -e /etc/initramfs-tools/initramfs.conf.krg-bak ] || \
+	cp /etc/initramfs-tools/initramfs.conf /etc/initramfs-tools/initramfs.conf.krg-bak
+    rm -f /etc/initramfs-tools/initramfs.conf
+    ln -fs initramfs.conf.local /etc/initramfs-tools/initramfs.conf
+    rm -f /boot/initrd.img-${kernel_version}
+    update-initramfs -k ${kernel_version} -c > /dev/null
+    if [ 0 -ne $? ]; then
+	k_log_error
+	exit 1
+    else
+	k_log_success
+    fi
 
     k_log_progress "Update GRUB 2"
+    [ -e /etc/default/grub.krg-bak ] || cp /etc/default/grub /etc/default/grub.krg-bak
+    sed -e 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT="Kerrighed '$kernel_version'"/' \
+	/etc/default/grub.krg-bak > /etc/default/grub
     update-grub > /dev/null
     if [ 0 -eq $? ]; then
 	k_log_success

@@ -1,22 +1,13 @@
 #!/bin/bash -e
 #
-# common functions 
+# common functions
 dft_valueinput=${basedir}/var/vars.default
+dft_valuecheck=${basedir}/var/vars.check
 dft_msg=${basedir}/var/vars.msg
 
 valueinput=${valueinput:-${dft_valueinput}}
 
-function k_check_root
-{
-    k_log_progress "Check if user is root"
-    if [ 0 -ne $(id -u) ]
-    then
-	k_log_error
-	exit 1
-    else
-	k_log_success
-    fi
-}
+[ -e ${dft_valuecheck} ] && . ${dft_valuecheck}
 
 function k_load_var_saved
 {
@@ -57,6 +48,14 @@ function k_load_var_user
     local value
     local msg=$(k_var_message ${name})
     read -e -p "${msg}> " value
+    value=$(echo "${value}" | sed 's/^\s*\(.*\)\s*/\1/')
+    if set | egrep -q "^k_check_var_${name} ()"; then
+	while ! eval "k_check_var_${name} ${value}"; do
+	    echo "${name}: incorrect value"
+	    read -e -p "${msg}> " value
+	    value=$(echo "${value}" | sed 's/^\s*\(.*\)\s*/\1/')
+	done
+    fi
     eval export ${name}=\"${value}\"
 }
 
@@ -87,6 +86,19 @@ function k_var_message
     echo ${msg}
 }
 
+function k_save_var
+{
+    if [ -z "${1}" -a -z "${2}" ]
+    then
+	echo "k_load_var_file: missing argument" >&2
+	exit 1
+    fi
+    name="${1}"
+    value="${2}"
+
+    echo "${name} ${value}" >> ${k_valuesoutput_tmp}
+}
+
 function k_load_var
 {
     if [ -z "${1}" ]
@@ -109,8 +121,56 @@ function k_load_var
 	    k_load_var_user ${name}
 	fi
 
-	# Save value
-	echo "${name} $(eval echo \$${name})" >> ${k_valuesoutput_tmp}
+	k_save_var "${name}" "$(eval echo \$${name})"
     fi
     eval export ${name}="\$${name}"
+}
+
+#
+# IP manipulation functions
+# Asssume all networks are /24
+#
+function k_ip_split
+{
+    echo $1 | tr '.' ' '
+}
+
+function k_ip_join
+{
+    echo "$1.$2.$3.$4"
+}
+
+# First address of network ($1)
+function k_ip_first
+{
+    local network=( $(k_ip_split $1) )
+    network[3]=1
+
+    k_ip_join ${network[@]}
+}
+
+function k_ip_last
+{
+    local network=( $(k_ip_split $1) )
+    network[3]=254
+
+    k_ip_join ${network[@]}
+}
+
+# Increment an IP ($1) with step ($2)
+# Return 0 on success, 1 if out of bounds
+function k_ip_incr
+{
+    local ip=( $(k_ip_split $1) )
+    local i=$2
+    local ret=0
+
+    ip[3]=$(( ${ip[3]}+i ))
+    if [ 255 -le ${ip[3]} ]; then
+	ret=1
+    else
+	k_ip_join ${ip[@]}
+    fi
+
+    return $ret
 }

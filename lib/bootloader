@@ -1,8 +1,19 @@
 #!/bin/bash -e
 #
-# bootloader functions 
+# bootloader functions
 function k_step_bootloader
 {
+    k_log_progress "Setup Kerrighed boot parameters"
+    # May be used by /etc/grub.d/09_kerrighed
+    local bootparams="session_id=1 init=/sbin/init-krg boot_id=1"
+    if [ ${dhcp_enable} -eq 0 ]; then
+	bootparams="${bootparams} autonodeid=1 ip=dhcp "
+    else
+	bootparams="${bootparams} autonodeid=0 node_id=1"
+    fi
+    echo ${bootparams} > /etc/kerrighed/bootparams.conf
+    k_log_success
+
     if which grub-mkconfig > /dev/null; then
 	# Should be GRUB2
 	k_bootloader_grub2
@@ -16,7 +27,7 @@ function k_bootloader_grub2
 {
     k_log_progress "k_bootloader_grub2(): not implemented"
     k_log_error
-    exit 1    
+    exit 1
 }
 
 function k_bootloader_boottool

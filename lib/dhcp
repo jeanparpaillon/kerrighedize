@@ -1,0 +1,45 @@
+#!/bin/bash -e
+#
+# dhcp functions
+function k_dhcp_init
+{
+    k_load_var dhcp_enable
+    [ $dhcp_enable -eq 0 ]  && return 0
+
+    k_load_var dhcp_network
+    k_load_var dhcp_interface
+
+    return 0
+}
+
+function k_step_dhcp
+{
+    if ! k_check_package ${dhcp_packages}
+    then
+	k_install_package ${dhcp_packages}
+    fi
+    k_configure_dhcp
+    k_configure_dhcp_distro
+}
+
+function k_configure_dhcp_distro
+{
+    k_log_progress "k_configure_dhcp_distro(): not implemented"
+    k_log_error
+    exit 1
+}
+
+function k_configure_dhcp
+{
+    k_log_progress "Setup dnsmasq config"
+    [ -e /etc/dnsmasq.conf.krg-bak ] || mv /etc/dnsmasq.conf /etc/dnsmasq.conf.krg-bak
+    cat > /etc/dnsmasq.conf <<EOF
+strict-order
+interface=${dhcp_interface}
+except-interface=lo
+dhcp-range=$(k_ip_incr $(k_ip_first ${dhcp_network}) 1),$(k_ip_last ${dhcp_network})
+dhcp-lease=253
+dhcp-boot=/srv/tftp/pxelinux.0,,$(k_ip_first ${dhcp_network})
+EOF
+    k_log_success
+}

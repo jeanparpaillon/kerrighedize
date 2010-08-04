@@ -5,7 +5,8 @@ tftp_packages=atftpd
 
 function k_configure_tftp_distro
 {
-    update-rc.d -f atftp remove
+    k_log_progress "Setup TFTP startup scripts"
+    update-rc.d -f atftp remove > /dev/null
 
     cat >> /etc/default/atftpd <<EOF
 USE_INETD=false
@@ -14,6 +15,7 @@ EOF
 
     if which update-inetd > /dev/null
     then
-	update-inetd --disable tftp
+	update-inetd --disable tftp > /dev/null
     fi
+    k_log_success
 }

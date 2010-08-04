@@ -98,7 +98,7 @@ function k_configure_pxe
 		echo "Incorrect value"
 		uinput=
 	    elif [ 0 -gt ${uinput} -o ${i} -le ${uinput} ]; then
-		echo "Value out of range"		
+		echo "Value out of range"
 		uinput=
 	    fi
 	done

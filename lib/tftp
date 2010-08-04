@@ -22,6 +22,7 @@ function k_configure_tftp_distro
 
 function k_configure_tftp
 {
+    k_log_progress "Setup TFTP startup scripts"
     # /etc/kerrighed/rcmaster/start.d
     level=/etc/kerrighed/rcmaster/start.d
     ln -fs ../../../init.d/atftpd ${level}/S20atftpd
@@ -35,4 +36,5 @@ function k_configure_tftp
     ln -fs ../../../init.d/atftpd ${level}/K10atftpd
 
     mkdir -p ${tftp_dir}
+    k_log_success
 }

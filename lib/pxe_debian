@@ -3,8 +3,6 @@
 # PXE functions (Debian implementation)
 pxe_packages="syslinux initramfs-tools"
 
-#k_load_var tftp_dir
-
 function k_configure_pxe_distro
 {
     ln -fs /usr/lib/syslinux/pxelinux.0 ${tftp_dir}/pxelinux.0
@@ -20,7 +18,7 @@ function k_make_initrd
     v=${1}
     ret=0
 
-    k_log_progress "Creating initramfs for Kerrighed kernel (${v})"
+    k_log_progress "Creating initramfs for NFSROOT boot (${v})"
     cat > /etc/initramfs-tools/initramfs.conf.nfs <<EOF
 MODULES=most
 BUSYBOX=y
@@ -31,14 +29,13 @@ DEVICE=
 NFSROOT=auto
 EOF
 
-    [ -e /etc/initramfs-tools/initramfs.conf.local ] || \
-	mv /etc/initramfs-tools/initramfs.conf /etc/initramfs-tools/initramfs.conf.local
+    [ -e /etc/initramfs-tools/initramfs.conf.krg-bak ] || \
+	cp /etc/initramfs-tools/initramfs.conf /etc/initramfs-tools/initramfs.conf.krg-bak
+    rm -f /etc/initramfs-tools/initramfs.conf
     ln -fs initramfs.conf.nfs /etc/initramfs-tools/initramfs.conf
-    update-initramfs -k ${v} -b ${tftp_dir} -d > /dev/null
+    rm -f ${tftp_dir}/initrd.img-${v}
     update-initramfs -k ${v} -b ${tftp_dir} -c > /dev/null
     ret=$?
-
-    ln -fs initramfs.conf.local /etc/initramfs-tools/initramfs.conf
 
     if [ 0 -eq $ret ]; then
 	k_log_success

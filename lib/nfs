@@ -20,6 +20,7 @@ function k_configure_nfs_distro
 
 function k_configure_nfs
 {
+    k_log_progress "Setup NFS Startup scripts"
     # /etc/kerrighed/rcmaster/start.d
     level=/etc/kerrighed/rcmaster/start.d
     ln -fs ../../../init.d/portmap ${level}/S14portmap
@@ -29,9 +30,10 @@ function k_configure_nfs
     level=/etc/kerrighed/rcmaster/halt.d
     ln -fs ../../../init.d/portmap ${level}/K15portmap
     ln -fs ../../init.d/nfs-server ${level}/K14nfs-server
-    
+
     # /etc/kerrighed/rcmaster/reboot.d
     level=/etc/kerrighed/rcmaster/reboot.d
     ln -fs ../../../init.d/portmap ${level}/K15portmap
     ln -fs ../../init.d/nfs-server ${level}/K14nfs-server
+    k_log_success
 }

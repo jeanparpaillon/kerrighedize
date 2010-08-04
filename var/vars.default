@@ -1,1 +1,4 @@
 global_nb_nodes 16
+dhcp_enable 0
+dhcp_network 192.168.169.0
+dhcp_interface eth1

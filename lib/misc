@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #
-# misc functions 
+# misc functions
 function k_step_misc
 {
     k_misc_master
