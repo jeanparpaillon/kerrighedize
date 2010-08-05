@@ -8,6 +8,7 @@ function k_step_misc
 
 function k_misc_master
 {
+    k_log_progress "Setup misc startup scripts"
     level=/etc/kerrighed/rcmaster/start.d
     ln -fs ../../init.d/hostname.sh ${level}/S02hostname.sh
     ln -fs ../../init.d/network ${level}/S10network
@@ -20,8 +21,14 @@ function k_misc_master
     level=/etc/kerrighed/rcmaster/reboot.d
     ln -fs ../../init.d/sshd ${level}/K10sshd
     ln -fs ../../init.d/reboot ${level}/K99reboot
+    k_log_success
 
     k_misc_master_distro
+
+    [ -d /config ] || mkdir /config
+    [ -e /etc/fstab.krg-bak ] || cp /etc/fstab /etc/fstab.krg-bak
+    sed -e '/^configfs/d' /etc/fstab.krg-bak > /etc/fstab
+    echo "configfs /config configfs defaults 0 0" >> /etc/fstab
 }
 
 function k_misc_master_distro
