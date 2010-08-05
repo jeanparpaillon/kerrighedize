@@ -106,10 +106,14 @@ function k_configure_pxe
     fi
     k_log "Using Kerrighed kernel ${kernel_version}\n"
 
+    if [ ${dhcp_enable} -eq 1 ]; then
+	nfsif=${dhcp_interface}
+    fi
+
     cat > /etc/kerrighed/pxelinux.conf <<EOF
 kernel=/boot/vmlinuz-${kernel_version}
 initrd=${tftp_dir}/initrd.img-${kernel_version}
-#nfsif=eth0
+nfsif=${nfsif}
 nfsrootopts=rsize=4096,wsize=4096
 EOF
 
