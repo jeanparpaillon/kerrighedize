@@ -111,16 +111,19 @@ case "$1" in
 	do_mount nfsd $PROCNFSD_MOUNTPOINT
 
 	[ -n "$EXPORTOPTS" ] && opts="-o $EXPORTOPTS"
-	log_begin_msg "Exporting directories for $DESC..."
-	for network in $(ip route | grep -v ^default | awk '{ print $1 }') 127.0.0.1/32; do
-	    /usr/sbin/exportfs $opts $network:/
-	done	
-	RET=$?
-	if [ $RET != 0 ]; then
-	    log_end_msg $RET
-	    exit $RET
-	fi
-	log_end_msg 0
+	EXPORTS=${EXPORTS:-"/"}
+	for point in $EXPORTS; do
+	    log_begin_msg "Exporting $point with NFS..."
+	    for network in $(ip route | grep -v ^default | awk '{ print $1 }') 127.0.0.1/32; do
+		/usr/sbin/exportfs $opts $network:$point
+	    done
+	    RET=$?
+	    if [ $RET != 0 ]; then
+		log_end_msg $RET
+		exit $RET
+	    fi
+	    log_end_msg 0
+	done
 
 	log_daemon_msg "Starting $DESC"
 	log_progress_msg "nfsd"
