@@ -15,7 +15,7 @@
 DESC="NFS root server"
 
 # Read config
-DEFAULTFILE=/etc/kerrighed/nfs-server.conf
+DEFAULTFILE=/etc/kerrighed/nfs.conf
 NEED_STATD=yes
 NEED_IDMAPD=yes
 PIPEFS_MOUNTPOINT=/var/lib/nfs/rpc_pipefs

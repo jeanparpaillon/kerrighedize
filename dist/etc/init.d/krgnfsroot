@@ -5,7 +5,7 @@
 # Required-Stop:
 # Default-Start:     S
 # Default-Stop:
-# Description:       Remount / through NFS on the NFS server if
+# Description:       Remount local exported filesystems through NFS on the NFS server if
 #                    it is part of the Kerrighed cluster.
 ### END INIT INFO
 
@@ -14,7 +14,7 @@
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="Remount / with NFS"
+DESC="Remount local fs with NFS"
 NAME=krgnfsroot
 DEFAULT=/etc/default/$NAME
 

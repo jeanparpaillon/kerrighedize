@@ -11,7 +11,7 @@ scripts="\
 "
 datas="\
         etc/default/krgnfsroot \
-	etc/kerrighed/nfs-server.conf etc/kerrighed/pxelinux.conf \
+	etc/kerrighed/nfs.conf etc/kerrighed/pxelinux.conf \
 	etc/kerrighed/sshd.conf etc/kerrighed/network.conf \
 "
 dirs="\
