@@ -4,14 +4,18 @@
 
 function k_misc_master_distro
 {
+    k_log_progress "Setup misc startup scripts (Debian)"
     level=/etc/kerrighed/rcmaster/start.d
     ln -fs ../../../init.d/mountkernfs.sh ${level}/S01mountkernfs.sh
     ln -fs ../../../init.d/checkroot.sh ${level}/S07checkroot.sh
 
     update-rc.d krgnfsroot defaults > /dev/null
+    update-rc.d kerrighed defaults > /dev/null
+
     # Install Kerrighed specififc halt and reboot init scripts
     # They are run just before the respective original scripts
     # to prevent them to be run in case of Kerrighed cluster.
     update-rc.d halt-krg defaults > /dev/null
     update-rc.d reboot-krg defaults > /dev/null
+    k_log_success
 }
