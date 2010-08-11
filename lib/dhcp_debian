@@ -1,0 +1,4 @@
+#!/bin/bash -e
+#
+# dhcp functions (Debian specific)
+dhcp_packages=dnsmasq

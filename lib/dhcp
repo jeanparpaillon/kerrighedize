@@ -19,14 +19,6 @@ function k_step_dhcp
 	k_install_package ${dhcp_packages}
     fi
     k_configure_dhcp
-    k_configure_dhcp_distro
-}
-
-function k_configure_dhcp_distro
-{
-    k_log_progress "k_configure_dhcp_distro(): not implemented"
-    k_log_error
-    exit 1
 }
 
 function k_configure_dhcp
