@@ -1,0 +1,126 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          krgremount
+# Required-Start:    $network
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Description:       Remount shared filesystems using /etc/fstab.krg (prepared by
+#                    /etc/init.d/krgnfsexport)
+### END INIT INFO
+
+# Author: Jean Parpaillon <jean.parpaillon@kerlabs.com>
+#
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="Remounting shared fs"
+NAME=krgremount
+DEFAULT=/etc/default/$NAME
+
+# Read configuration variable file if it is present
+[ -r $DEFAULT ] && . $DEFAULT
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.2-14) to ensure that this file is present
+# and status_of_proc is working.
+. /lib/lsb/init-functions
+
+. /lib/init/kerrighed-functions
+
+is_kerrighed_kernel || exit 0
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+    if [ ! -f /etc/fstab.krg ]; then
+	log_progress_msg "no such file: /etc/fstab.krg"
+	log_end_msg 1
+	exit 1
+    fi
+
+    # Umount bind-mounted /etc/rcS.d by /etc/init.d/krglast
+    umount /etc/rcS.d
+
+    # Remount '/'
+    while read DEV MTPT FSTYPE OPTS DUMP PASS JUNK
+    do
+	case "$DEV" in
+	    ""|\#*)
+		continue
+		;;
+	esac
+
+	auto=1
+	for opt in $(echo $OPTS | tr ',' ' '); do
+	    if [ "$opt" = "noauto" ]; then
+		auto=0
+	    fi
+	done
+	if [ $auto -eq 1 ]; then
+	    log_progress_msg "/"
+	    mount -n -t $FSTYPE -o $OPTS $DEV $MTPT
+	    RET=$?
+	    log_end_msg $RET
+	    if [ $RET -ne 0 ]; then
+		exit 1
+	    fi
+	fi
+    done < /etc/fstab.krg
+
+    # Mount configfs if not done
+    if ! grep -q ^configfs /proc/mounts; then
+	mkdir -p /config
+	mount -t configfs configfs /config
+    fi
+
+    # Hide original fstab
+    #mount -o bind /etc/fstab.krg /etc/fstab
+
+    return ${RET:-0}
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+    return 0
+}
+
+#
+# Function that sends a SIGHUP to the daemon/service
+#
+do_reload() {
+	return 0
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "$DESC"
+	do_start
+	case "$?" in
+		0|1) log_end_msg 0 ;;
+		2) log_end_msg 1 ;;
+	esac
+	;;
+  stop)
+	log_daemon_msg "Stopping $NAME"
+	do_stop
+	case "$?" in
+		0|1) log_end_msg 0 ;;
+		2) log_end_msg 1 ;;
+	esac
+	;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop}" >&2
+	exit 3
+	;;
+esac
+
+:

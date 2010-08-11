@@ -44,3 +44,8 @@ EOF
     fi
     return $?
 }
+
+function k_get_local_linux_cmdline
+{
+    awk -F'=' '/^GRUB_CMDLINE_LINUX_DEFAULT/ { print $2 }' /etc/default/grub
+}

@@ -1,0 +1,42 @@
+#! /bin/sh
+#
+# tftpd - Script to launch tftpd server on Kerrighed master.
+#
+### BEGIN INIT INFO
+# Provides:          krgtftp
+# Required-Start:    $syslog $network $remote_fs
+# Required-Stop:     $syslog $network $remote_fs
+# Should-Start:      $local_fs
+# Should-Stop:       $local_fs
+# Default-Start:     S
+# Default-Stop:      
+# Short-Description: Launch tftpd server on Kerrighed master
+### END INIT INFO
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+NAME=krgtftp
+DEFAULT=/etc/default/krgtftp
+WRAP=/etc/init.d/atftpd
+WRAPDEFAULT=/etc/default/atftpd
+
+. /lib/init/kerrighed-functions
+
+is_kerrighed_kernel || exit 0
+is_kerrighed_boot || exit 0
+
+set -e
+
+case "$1" in
+  start|stop|restart|reload|force-reload)
+	[ -f $DEFAULT ] && mount -o bind $DEFAULT $WRAPDEFAULT
+	$WRAP $1
+	[ -f $DEFAULT ] && umount $WRAPDEFAULT
+	;;
+  *)
+	N=/etc/init.d/$NAME
+        echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

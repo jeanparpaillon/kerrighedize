@@ -1,0 +1,39 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:       krgdnsmasq
+# Required-Start: $network $remote_fs $syslog
+# Required-Stop:  $network $remote_fs $syslog
+# Default-Start:  S
+# Default-Stop:
+# Description:    DHCP and DNS server (Kerrighed)
+### END INIT INFO
+
+set +e   # Don't exit on error status
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+NAME=krgdnsmasq
+DEFAULT=/etc/default/$NAME
+DESC="DNS forwarder and DHCP server (Kerrighed)"
+
+WRAP=/etc/init.d/dnsmasq
+WRAPDEFAULT=/etc/default/dnsmasq
+
+. /lib/init/kerrighed-functions
+
+is_kerrighed_kernel || exit 0
+is_kerrighed_boot || exit 0
+
+case "$1" in
+  start|stop|restart|force-reload|status)
+	[ -f $DEFAULT ] && mount -o bind $DEFAULT $WRAPDEFAULT
+	$WRAP $1
+	[ -f $DEFAULT ] && umount $WRAPDEFAULT
+	;;
+  *)
+	echo "Usage: /etc/init.d/$NAME {start|stop|restart|force-reload|status}" >&2
+	exit 3
+	;;
+esac
+
+exit 0
+

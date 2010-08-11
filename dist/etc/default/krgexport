@@ -2,3 +2,4 @@
 #initrd=/srv/tftp/initrd.img-2.6.30-krg3.0.0
 #nfsif=eth0
 #nfsrootopts=rsize=4096,wsize=4096
+#bootopts=

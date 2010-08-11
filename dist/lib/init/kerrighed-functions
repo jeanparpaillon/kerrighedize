@@ -1,0 +1,35 @@
+#! /bin/sh
+#
+# Functions used by several krg* scripts in Kerrighed
+#
+# Sourcer must source /lib/lsb/kerrighed-functions
+
+kerrighed_boot_id()
+{
+    for word in $(cat /proc/cmdline ); do
+	if echo $word | grep -q '^boot_id='; then
+	    echo $word | cut -f2 -d'='
+	    break
+	fi
+    done
+}
+
+is_kerrighed_kernel()
+{
+    [ -d /sys/kerrighed ] && return 0
+    return 1
+}
+
+is_kerrighed_boot()
+{
+    [ "$(cat /sys/kerrighed/node_id)" = "$(kerrighed_boot_id)" ] && return 0
+    return 1
+}
+
+is_kerrighed_up()
+{
+    if [ -f /usr/sbin/krgadm ]; then
+	/usr/sbin/krgadm cluster status > /dev/null 2>&1 && return 0
+    fi
+    return 1
+}

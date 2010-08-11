@@ -1,0 +1,30 @@
+#!/bin/bash -e
+#
+# common functions (Debian specific)
+function k_enable_service
+{
+    if [ -z "${1}" ]
+    then
+	echo "k_enable_service(): missing argument" >&2
+	exit 1
+    fi
+    local service=$1
+
+    k_log_progress "Enable service $service"
+    update-rc.d $service defaults > /dev/null 2>&1
+    k_log_end $?
+}
+
+function k_disable_service
+{
+    if [ -z "${1}" ]
+    then
+	echo "k_disable_service(): missing argument" >&2
+	exit 1
+    fi
+    local service=$1
+
+    k_log_progress "Disable service $service"
+    update-rc.d -f $service remove > /dev/null 2>&1
+    k_log_end $?
+}

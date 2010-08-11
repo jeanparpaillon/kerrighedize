@@ -1,12 +1,11 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          krgnfsroot
-# Required-Start:    $network
+# Provides:          krglast
+# Required-Start:    $all
 # Required-Stop:
 # Default-Start:     S
 # Default-Stop:
-# Description:       Remount local exported filesystems through NFS on the NFS server if
-#                    it is part of the Kerrighed cluster.
+# Description:       Disable rcS in Kerrighed container
 ### END INIT INFO
 
 # Author: Jean Parpaillon <jean.parpaillon@kerlabs.com>
@@ -14,15 +13,13 @@
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="Remount local fs with NFS"
-NAME=krgnfsroot
-DEFAULT=/etc/default/$NAME
+DESC="Enabling specific rcS for Kerrighed container"
+NAME=krglast
 
-# Run only with Kerrighed kernel
-[ -e /sys/kerrighed/node_id ] || exit 0
+. /lib/init/kerrighed-functions
 
-# Read configuration variable file if it is present
-[ -r $DEFAULT ] && . $DEFAULT
+is_kerrighed_kernel || exit 0
+is_kerrighed_boot || exit 0
 
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
@@ -37,11 +34,14 @@ DEFAULT=/etc/default/$NAME
 #
 do_start()
 {
-    if [ "$REMOUNTNFS" = "true" ]; then
-	mount 127.0.0.1:/ /
-	RET=$?
-    fi
-    return ${RET:-0}
+    [ -d /etc/rcS.d.krg ] && rm -r /etc/rcS.d.krg
+    mkdir -p /etc/rcS.d.krg
+
+    # Replace original rcS with Kerrighed container's one
+    mount -o bind /etc/rcS.d.krg /etc/rcS.d
+    RET=$?
+
+    return $RET
 }
 
 #
@@ -60,7 +60,7 @@ do_reload() {
 }
 
 case "$1" in
-  start|restart|force-reload)
+  start)
 	log_daemon_msg "$DESC"
 	do_start
 	case "$?" in
@@ -76,15 +76,8 @@ case "$1" in
 		2) log_end_msg 1 ;;
 	esac
 	;;
-  status)
-	if [ -n "$(mount | sed '/^\/\S\+\s\+on\s\+\/\s\+.*/!d')" ]; then
-	    echo "'/' not mounted as NFS"
-	else
-	    echo "'/' mounted as NFS"
-	fi
-       ;;
   *)
-	echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+	echo "Usage: $SCRIPTNAME {start|stop}" >&2
 	exit 3
 	;;
 esac

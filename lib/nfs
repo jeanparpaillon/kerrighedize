@@ -7,33 +7,16 @@ function k_step_nfsserver
     then
 	k_install_package ${nfs_packages}
     fi
-    k_configure_nfs_distro
     k_configure_nfs
-}
-
-function k_configure_nfs_distro
-{
-    k_log_progress "k_configure_nfs_distro(): not implemented"
-    k_log_error
-    exit 1
+    k_configure_nfs_distro
 }
 
 function k_configure_nfs
 {
-    k_log_progress "Setup NFS Startup scripts"
-    # /etc/kerrighed/rcmaster/start.d
-    level=/etc/kerrighed/rcmaster/start.d
-    ln -fs ../../../init.d/portmap ${level}/S14portmap
-    ln -fs ../../init.d/nfs-server ${level}/S15nfs-server
+    k_enable_service krgexport
+}
 
-    # /etc/kerrighed/rcmaster/halt.d
-    level=/etc/kerrighed/rcmaster/halt.d
-    ln -fs ../../../init.d/portmap ${level}/K15portmap
-    ln -fs ../../init.d/nfs-server ${level}/K14nfs-server
-
-    # /etc/kerrighed/rcmaster/reboot.d
-    level=/etc/kerrighed/rcmaster/reboot.d
-    ln -fs ../../../init.d/portmap ${level}/K15portmap
-    ln -fs ../../init.d/nfs-server ${level}/K14nfs-server
-    k_log_success
+function k_configure_nfs_distro
+{
+    true
 }

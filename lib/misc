@@ -8,32 +8,11 @@ function k_step_misc
 
 function k_misc_master
 {
-    k_log_progress "Setup misc startup scripts"
-    level=/etc/kerrighed/rcmaster/start.d
-    ln -fs ../../init.d/hostname.sh ${level}/S02hostname.sh
-    ln -fs ../../init.d/network ${level}/S10network
-    ln -fs ../../init.d/sshd ${level}/S20sshd
+    services="krghalt krghostname.sh krgreboot krgremount krgsshd kerrighed krglast krgdiskless"
+    for service in $services; do
+	k_enable_service $service
+    done
 
-    level=/etc/kerrighed/rcmaster/halt.d
-    ln -fs ../../init.d/sshd ${level}/K10sshd
-    ln -fs ../../init.d/halt ${level}/K99halt
-
-    level=/etc/kerrighed/rcmaster/reboot.d
-    ln -fs ../../init.d/sshd ${level}/K10sshd
-    ln -fs ../../init.d/reboot ${level}/K99reboot
-    k_log_success
-
-    k_misc_master_distro
-
-    [ -d /config ] || mkdir /config
-    [ -e /etc/fstab.krg-bak ] || cp /etc/fstab /etc/fstab.krg-bak
-    sed -e '/^configfs/d' /etc/fstab.krg-bak > /etc/fstab
-    echo "configfs /config configfs defaults 0 0" >> /etc/fstab
-}
-
-function k_misc_master_distro
-{
-    k_log_progress "k_misc_master_distro(): not implemented"
-    k_log_error
-    exit 1
+    # Setup krginit_helper
+    echo "KRGINIT_ARGS='-- /usr/sbin/sshd -D'" > /etc/kerrighed/krginit_helper.conf
 }

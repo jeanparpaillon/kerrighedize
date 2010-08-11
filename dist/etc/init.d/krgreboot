@@ -1,6 +1,6 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          reboot-krg
+# Provides:          krgreboot
 # Required-Start:
 # Required-Stop:     reboot
 # Should-Stop:
@@ -14,13 +14,16 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 
 . /lib/lsb/init-functions
+. /lib/init/kerrighed-functions
 
-# Gracefully exit if not running a Kerrighed kernel
-[ -e /sys/kerrighed/node_id ] || exit 0
+is_kerrighed_kernel || exit 0
 
 do_stop () {
-	# Message should end with a newline since kFreeBSD may
-	# print more stuff (see #323749)
+    if ! is_kerrighed_up; then
+	log_warning_msg "Kerrighed not running: doing normal reboot"
+	return 0
+    fi	
+
 	log_action_msg "Will now restart the cluster"
 	krgadm cluster reboot
 

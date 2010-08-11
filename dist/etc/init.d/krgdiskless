@@ -1,0 +1,78 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          krgdiskless
+# Required-Start:    mountkernfs
+# Required-Stop:
+# Default-Start:     S
+# Default-Stop:
+# Description:       Replace /etc/fstab with /etc/fstab.diskless
+### END INIT INFO
+
+# Author: Jean Parpaillon <jean.parpaillon@kerlabs.com>
+#
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="Prepare Kerrighed diskless nodes filesystems"
+NAME=krgdiskless
+TMPMTAB=/lib/init/rw/mtab
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.2-14) to ensure that this file is present
+# and status_of_proc is working.
+. /lib/lsb/init-functions
+
+. /lib/init/kerrighed-functions
+
+# Run only on Kerrighed system
+is_kerrighed_kernel || exit 0
+# Run only if node is _not_ the boot node
+is_kerrighed_boot && exit 0
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+    if [ ! -f /etc/fstab.diskless ]; then
+	log_progress_msg "no such file: /etc/fstab.diskless"
+	log_end_msg 1
+	exit 1
+    fi
+
+    touch $TMPMTAB && mount -n -o bind $TMPMTAB /etc/mtab
+    mount -n -o bind /etc/fstab.diskless /etc/fstab
+
+    return 0
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+    return 0
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "$DESC"
+	do_start
+	case "$?" in
+		0|1) log_end_msg 0 ;;
+		2) log_end_msg 1 ;;
+	esac
+	;;
+  stop)
+	do_stop
+	;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop}" >&2
+	exit 3
+	;;
+esac
+
+:

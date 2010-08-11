@@ -32,8 +32,7 @@ function k_configure_dhcp_distro
 function k_configure_dhcp
 {
     k_log_progress "Setup dnsmasq config"
-    [ -e /etc/dnsmasq.conf.krg-bak ] || mv /etc/dnsmasq.conf /etc/dnsmasq.conf.krg-bak
-    cat > /etc/dnsmasq.conf <<EOF
+    cat > /etc/krgdnsmasq.conf <<EOF
 strict-order
 interface=${dhcp_interface}
 except-interface=lo
@@ -42,4 +41,7 @@ dhcp-lease=253
 dhcp-boot=/srv/tftp/pxelinux.0,,$(k_ip_first ${dhcp_network})
 EOF
     k_log_success
+
+    k_disable_service dnsmasq
+    k_enable_service krgdnsmasq
 }

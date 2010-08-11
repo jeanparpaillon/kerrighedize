@@ -14,6 +14,9 @@ SYS_DIR=/sys/kerrighed/hotplug
 # Load logger functions
 . /lib/lsb/init-functions
 
+# Load Kerrighed common functions
+. /lib/init/kerrighed-functions
+
 d_set_isolate_ns() {
     case "x$1" in
         xtrue)
@@ -31,24 +34,6 @@ d_set_isolate_ns() {
     esac
 
     return ${STATUS:-0}
-}
-
-run_scripts() {
-    local action=$1
-    local dir=/etc/kerrighed
-    if [ "$(cat /sys/kerrighed/node_id)" = "$BOOT_ID" ]; then
-	dir=$dir/rcmaster
-    else
-	dir=$dir/rcnode
-    fi
-    dir=$dir/${action}.d
-
-    log_success_msg "Begin scripts in $dir"
-    if [ -d $dir ]; then
-	run-parts --lsbsysinit --regex 'S.*' --arg=start $dir || true
-	run-parts --lsbsysinit --regex 'K.*' --arg=stop $dir || true
-    fi
-    log_success_msg "End scripts in $dir"
 }
 
 if pidof init > /dev/null; then
@@ -70,12 +55,21 @@ if [ -z "$INIT" ]; then
     exit 1
 fi
 
-if [ ! -d /sys/kerrighed ]; then
+if ! is_kerrighed_kernel; then
     echo "init-krg: no support for Kerrighed in kernel. Doing normal boot..."
     exec $INIT
 fi
 
-# Setup Kerrighed host
+if ! is_kerrighed_boot; then
+    # Disable udev on diskless nodes
+    # Must be done really early
+    mount -n -o bind /bin/true /etc/init.d/udev
+fi
+
+# Run rcS runlevel
+/etc/init.d/rcS
+
+# Setup Kerrighed
 log_begin_msg "Load Kerrighed configuration"
 if [ -e $CFG ]; then
     . $CFG
@@ -101,16 +95,8 @@ for dev in $NET_DEVICES; do
 done
 log_end_msg 0
 
-# Give precedence to boot paramater for boot_id
-for word in $(cat /proc/cmdline ); do
-    if echo $word | grep -q '^boot_id='; then
-	BOOT_ID=$(echo $word | cut -f2 -d'=')
-    fi
-done
-
-run_scripts start
-if [ "$(cat /sys/kerrighed/node_id)" = "$BOOT_ID" ]; then
-    # Start Kerrighed container on BOOT_ID node
+if is_kerrighed_boot; then
+    # Start Kerrighed container on boot node
     ISOLATE_UTS=`cat $SYS_DIR/isolate_uts`
     ISOLATE_IPC=`cat $SYS_DIR/isolate_ipc`
     ISOLATE_MNT=`cat $SYS_DIR/isolate_mnt`
@@ -140,6 +126,11 @@ if [ "$(cat /sys/kerrighed/node_id)" = "$BOOT_ID" ]; then
 
     log_success_msg "Launch Kerrighed container"
     /usr/sbin/krgboot $NS_ARGS -- /usr/sbin/krginit_helper /sbin/init
+else
+    id=$(printf '%03d' $(cat /sys/kerrighed/node_id) )
+    echo "##############################################################"
+    echo "# Kerrighed node ready (id: $id)                             #"
+    echo "##############################################################"
 fi
 
 while true; do

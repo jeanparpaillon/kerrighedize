@@ -3,21 +3,19 @@
 # install functions
 scripts="\
 	usr/sbin/boottool sbin/init-krg \
-	etc/grub.d/09_kerrighed \
-	etc/init.d/reboot-krg etc/init.d/halt-krg etc/init.d/krgnfsroot \
-	etc/kerrighed/init.d/pxelinux etc/kerrighed/init.d/nfs-server \
-	etc/kerrighed/init.d/sshd etc/kerrighed/init.d/hostname.sh \
-	etc/kerrighed/init.d/network\
+	etc/grub.d/09_kerrighed etc/init.d/krgtftp \
+        etc/init.d/krgdnsmasq etc/init.d/krghalt \
+        etc/init.d/krghostname.sh etc/init.d/krgexport \
+        etc/init.d/krgreboot etc/init.d/krgremount \
+        etc/init.d/krgsshd etc/init.d/krglast \
+        etc/init.d/krgdiskless \
 "
 datas="\
-        etc/default/krgnfsroot \
-	etc/kerrighed/nfs.conf etc/kerrighed/pxelinux.conf \
-	etc/kerrighed/sshd.conf etc/kerrighed/network.conf \
+        lib/init/kerrighed-functions \
+        etc/default/krgdnsmasq etc/default/krgexport \
+        etc/default/krgremount etc/default/krgsshd \
 "
 dirs="\
-        etc/kerrighed/rcmaster/start.d \
-        etc/kerrighed/rcmaster/halt.d \
-        etc/kerrighed/rcmaster/reboot.d \
         etc/kerrighed/rcnode/start.d \
         etc/kerrighed/rcnode/halt.d \
         etc/kerrighed/rcnode/reboot.d \

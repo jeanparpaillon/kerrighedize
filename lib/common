@@ -174,3 +174,20 @@ function k_ip_incr
 
     return $ret
 }
+
+#
+# Services related functions
+#
+function k_enable_service
+{
+    k_log_progress "k_enable_service(): not implemented"
+    k_log_error
+    exit 1
+}
+
+function k_disable_service
+{
+    k_log_progress "k_disable_service(): not implemented"
+    k_log_error
+    exit 1
+}

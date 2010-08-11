@@ -136,9 +136,9 @@ k_dhcp_init
 # Run steps
 k_step_install
 [ ${dhcp_enable} -eq 1 ] && k_step_dhcp
-k_step_nfsserver
 k_step_tftp
 k_step_pxe
+k_step_nfsserver
 k_step_bootloader
 k_step_misc
 

@@ -58,10 +58,6 @@ function k_configure_pxe
 {
     mkdir -p ${tftp_dir}/pxelinux.cfg
 
-    # /etc/kerrighed/rcmaster/start.d
-    level=/etc/kerrighed/rcmaster/start.d
-    ln -fs ../../init.d/pxelinux ${level}/S99pxelinux
-
     k_log "Looking for valid Kerrighed kernels: \n"
     local i=0
     local versions=()
@@ -72,7 +68,6 @@ function k_configure_pxe
 	    i=$(( i+1 ))
 	fi
     done
-    k_log "\n"
 
     if [ 0 -eq ${i} ]; then
 	k_log_error "No Kerrighed kernel found"
@@ -110,12 +105,20 @@ function k_configure_pxe
 	nfsif=${dhcp_interface}
     fi
 
-    cat > /etc/kerrighed/pxelinux.conf <<EOF
+    cat > /etc/default/krgexport <<EOF
 kernel=/boot/vmlinuz-${kernel_version}
 initrd=${tftp_dir}/initrd.img-${kernel_version}
 nfsif=${nfsif}
 nfsrootopts=rsize=4096,wsize=4096
+bootopts=$(k_get_local_linux_cmdline)
 EOF
 
     k_make_initrd ${kernel_version}
+}
+
+function k_get_local_linux_cmdline
+{
+    k_log_progress "k_make_initrd(): not implemented"
+    k_log_error
+    exit 1    
 }
