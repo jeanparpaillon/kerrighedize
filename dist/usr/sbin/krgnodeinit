@@ -1,0 +1,36 @@
+#! /bin/sh
+# exec'd on Kerrighed nodes' Kerrighed container
+#
+# Author: Jean Parpaillon <jean.parpaillon@kerlabs.com>
+#
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+. /lib/init/kerrighed-functions
+
+is_kerrighed_kernel || exit 0
+is_kerrighed_boot && exit 0
+
+KRGINIT=/usr/sbin/krginit
+SSHD=/usr/sbin/sshd
+SSHDOPTS=""
+
+error()
+{
+    echo "E: $@"
+    exit 1
+}
+
+[ -x $KRGINIT ] || error "Not found or not executable: $KRGINIT"
+[ -x $SSHD ] || error "Not found or not executable: $SSHD"
+
+echo "#"
+echo "# Node has join the cluster."
+echo "#"
+mount -t proc krg-procfs /proc
+cd /
+exec chroot / /usr/sbin/krginit -s -- /usr/sbin/sshd -D $SSHDOPTS
+
+# Not reached
+exit 0

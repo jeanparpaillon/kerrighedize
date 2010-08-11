@@ -1,0 +1,15 @@
+#!/bin/bash -e
+#
+# misc functions (Debian specific)
+function k_misc_distro
+{
+    # Ensure /etc/network/run is local to each node
+    rm -r /etc/network/run
+    mkdir -p /dev/shm/network
+    ln -s /dev/shm/network /etc/network/run
+
+    # Ensure nfs mounts do not wait for ifup (see man rcS(5))
+    [ -f /etc/default/rcS ] && cp /etc/default/rcS /etc/default/rcS.krg-bak
+    sed -i -e '/^ASYNCMOUNTNFS=/d' /etc/default/rcS
+    echo "ASYNCMOUNTNFS=no" >> /etc/default/rcS
+}

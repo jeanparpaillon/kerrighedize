@@ -3,16 +3,21 @@
 # misc functions
 function k_step_misc
 {
-    k_misc_master
+    k_misc
+    k_misc_distro
 }
 
-function k_misc_master
+function k_misc
 {
     services="krghalt krghostname.sh krgreboot krgremount krgsshd kerrighed krglast krgdiskless"
     for service in $services; do
 	k_enable_service $service
     done
+}
 
-    # Setup krginit_helper
-    echo "KRGINIT_ARGS='-- /usr/sbin/sshd -D'" > /etc/kerrighed/krginit_helper.conf
+function k_misc_distro
+{
+    k_log_progress "k_misc_distro(): not implemented"
+    k_log_error
+    exit 1
 }
