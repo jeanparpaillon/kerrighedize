@@ -86,7 +86,7 @@ d_set_isolate_ns "$ISOLATE_USER" isolate_user
 log_end_msg 0
 
 log_begin_msg "Setup Kerrighed init"
-echo -n "/usr/sbin/krgnodeinit" > /sys/kerrighed/hotplug/cluster_init_helper
+echo -n "/usr/sbin/krgctnrinit" > /sys/kerrighed/hotplug/cluster_init_helper
 log_end_msg 0
 
 log_begin_msg "Setup Kerrighed network devices"
@@ -96,36 +96,8 @@ done
 log_end_msg 0
 
 if is_kerrighed_boot; then
-    # Start Kerrighed container on boot node
-    ISOLATE_UTS=`cat $SYS_DIR/isolate_uts`
-    ISOLATE_IPC=`cat $SYS_DIR/isolate_ipc`
-    ISOLATE_MNT=`cat $SYS_DIR/isolate_mnt`
-    ISOLATE_PID=`cat $SYS_DIR/isolate_pid`
-    ISOLATE_NET=`cat $SYS_DIR/isolate_net`
-    ISOLATE_USER=`cat $SYS_DIR/isolate_user`
-
-    NS_ARGS=
-    if [ "$ISOLATE_UTS" -ne 0 ]; then
-	NS_ARGS="$NS_ARGS -u"
-    fi
-    if [ "$ISOLATE_IPC" -ne 0 ]; then
-	NS_ARGS="$NS_ARGS -i"
-    fi
-    if [ "$ISOLATE_MNT" -ne 0 ]; then
-	NS_ARGS="$NS_ARGS -m"
-    fi
-    if [ "$ISOLATE_PID" -ne 0 ]; then
-	NS_ARGS="$NS_ARGS -p"
-    fi
-    if [ "$ISOLATE_NET" -ne 0 ]; then
-	NS_ARGS="$NS_ARGS -n"
-    fi
-    if [ "$ISOLATE_USER" -ne 0 ]; then
-	NS_ARGS="$NS_ARGS -U"
-    fi
-
     log_success_msg "Launch Kerrighed container"
-    /usr/sbin/krgboot $NS_ARGS -- /usr/sbin/krginit_helper /sbin/init
+    /usr/sbin/krgboot_helper
 else
     id=$(printf '%03d' $(cat /sys/kerrighed/node_id) )
     echo "##############################################################"

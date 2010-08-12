@@ -8,7 +8,7 @@ scripts="\
         etc/init.d/krghostname.sh etc/init.d/krgexport \
         etc/init.d/krgreboot etc/init.d/krgremount \
         etc/init.d/krgsshd etc/init.d/krglast \
-        etc/init.d/krgdiskless usr/sbin/krgnodeinit \
+        etc/init.d/krgdiskless usr/sbin/krgctnrinit \
 "
 datas="\
         lib/init/kerrighed-functions \

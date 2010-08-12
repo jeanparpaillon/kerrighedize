@@ -10,7 +10,6 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 . /lib/init/kerrighed-functions
 
 is_kerrighed_kernel || exit 0
-is_kerrighed_boot && exit 0
 
 KRGINIT=/usr/sbin/krginit
 SSHD=/usr/sbin/sshd
@@ -24,13 +23,18 @@ error()
 
 [ -x $KRGINIT ] || error "Not found or not executable: $KRGINIT"
 [ -x $SSHD ] || error "Not found or not executable: $SSHD"
+[ -x /sbin/init ] || error "Not found or not executable: /sbin/init"
 
-echo "#"
-echo "# Node has join the cluster."
-echo "#"
 mount -t proc krg-procfs /proc
 cd /
-exec chroot / /usr/sbin/krginit -s -- /usr/sbin/sshd -D $SSHDOPTS
+if is_kerrighed_boot; then
+    exec chroot / /usr/sbin/krginit -s -- /sbin/init
+else  
+    echo "#"
+    echo "# Node has join the cluster."
+    echo "#"
+    exec chroot / /usr/sbin/krginit -s -- /usr/sbin/sshd -D $SSHDOPTS
+fi
 
 # Not reached
 exit 0
