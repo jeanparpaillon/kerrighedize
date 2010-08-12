@@ -1,0 +1,158 @@
+#!/usr/bin/env python
+""" kerrighed-manager: monitor nodes presence and notify clients
+
+Daemonization recipe from: http://code.activestate.com/recipes/278731-creating-a-daemon-the-python-way/
+"""
+
+__author__ = "Jean Parpaillon"
+__copyright__ = "Copyright (C) 2010 Kerlabs"
+
+__revision__ = "$Id$"
+__version__ = "0.1"
+
+import os, sys, signal, time, lockfile
+import logging, logging.handlers
+from optparse import OptionParser
+import daemon
+import kerrighed
+
+NAME = 'kerrighed-manager'
+POLLTIME = 1
+PIDFILE = '/var/run/KerrighedManager.pid'
+
+log = logging.getLogger()
+
+class KerrighedManager(object):
+
+   def __init__(self, autoadd=False):
+      self.online = None
+      self.present = None
+      self.autoadd = autoadd
+
+   def run(self):
+      try:
+         self.init()
+      except Exception, e:
+         log.error(str(e))
+      while True:
+         time.sleep(POLLTIME)
+         try:
+            self.update()
+         except Exception, e: 
+            log.error(str(e))
+            break
+
+   def init(self):
+      status = kerrighed.krg_nodes_status()
+      self.online = status.get_online()
+      self.present = status.get_present()
+      msg = 'present: %i, online: %i' % (len(self.present), len(self.online))
+      log.info(msg)
+      log.info('autoadd is set to %s' % self.autoadd)
+
+   def set_autoadd(self, value):
+      log.info('autoadd is set to %s' % value)
+      self.autoadd = value
+
+   def handle_present_to_online(self, node):
+      log.info('node %i has join the cluster' % node)
+
+   def handle_present_to_possible(self, node):
+      log.info('node %i has disappeared' % node)
+
+   def handle_possible_to_present(self, node):
+      if self.autoadd:
+         s = kerrighed.krg_node_set()
+         s.add(node)
+         kerrighed.krg_nodes_add(s)
+      log.info('node %i is ready for joining' % node)
+
+   def handle_online_to_present(self, node):
+      log.info('node %i has left the cluster' % node)
+
+   def handle_online_to_possible(self, node):
+      self.handle_present_to_possible(node)
+
+   def handle_possible_to_online(self, node):
+      self.handle_present_to_online(node)
+
+   def update(self):
+      status = kerrighed.krg_nodes_status()
+      for node in status.get_online():
+         if node in self.online:
+            continue
+         elif node in self.present:
+            self.handle_present_to_online(node)
+            self.present.discard(node)
+            self.online.add(node)
+         else:
+            self.handle_possible_to_online(node)
+            self.online.add(node)
+      for node in status.get_present():
+         if node in self.online:
+            self.handle_online_to_present(node)
+            self.online.discard(node)
+            self.present.add(node)
+         elif node in self.present:
+            continue
+         else:
+            self.handle_possible_to_present(node)
+            self.present.add(node)
+      for node in status.get_possible():
+         if node in self.online:
+            self.handle_online_to_possible(node)
+            self.online.discard(node)
+         elif node in self.present:
+            self.handle_present_to_possible(node)
+            self.present.discard(node)
+
+def handle_exit(value):
+   log.info('Exiting...')
+   sys.exit(value)
+
+class ForegroundContext(object):
+   def __enter__(self):
+      return self
+   def __exit__(self, type, value, traceback):
+      handle_exit(value)
+
+def main():
+   context = None
+   pidfile = PIDFILE
+   autoadd = False
+   ret = 0
+
+   parser = OptionParser()
+   parser.add_option("-D", "--foreground",
+                     action="store_true", dest="foreground", default=False,
+                     help="don't daemonize")
+   parser.add_option("-a", "--autoadd",
+                     action="store_true", dest="autoadd", default=False,
+                     help="automatically add present nodes")
+   parser.add_option("-f", "--pid-file", dest="pidfile",
+                     help="daemon pid file", metavar="FILE")
+   (options, args) = parser.parse_args()
+
+   if options.pidfile:
+      pidfile = options.pidfile
+   autoadd = options.autoadd
+
+   log.setLevel(logging.INFO)
+   if options.foreground:
+      context = ForegroundContext()
+   else:
+      context = daemon.DaemonContext(pidfile=lockfile.FileLock(pidfile))
+      
+   km = KerrighedManager(autoadd=autoadd)
+   with context:
+      if options.foreground:
+         handler = logging.StreamHandler(sys.stderr)
+      else:
+         handler = logging.handlers.SysLogHandler(address='/dev/log')
+      log.addHandler(handler)
+      km.run()
+      
+   sys.exit(ret)
+
+if __name__ == "__main__":
+   main()
