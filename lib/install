@@ -15,11 +15,6 @@ datas="\
         etc/default/krgdnsmasq etc/default/krgexport \
         etc/default/krgremount etc/default/krgsshd \
 "
-dirs="\
-        etc/kerrighed/rcnode/start.d \
-        etc/kerrighed/rcnode/halt.d \
-        etc/kerrighed/rcnode/reboot.d \
-"
 
 distdir=${basedir}/dist
 install_scripts="install -D -m 755 -o root -g root"
@@ -44,11 +39,6 @@ function k_step_install
     for file in ${datas}; do
 	k_log "\tdata  : ${file}\n"
 	${install_data} ${distdir}/${file} /${file}
-	[ 0 -eq $? ] || return 1
-    done
-    for dir in ${dirs}; do
-	k_log "\tdir   : ${dir}\n"
-	${install_dir} /${dir}
 	[ 0 -eq $? ] || return 1
     done
 
