@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 """ kerrighed-manager: monitor nodes presence and notify clients
-
-Daemonization recipe from: http://code.activestate.com/recipes/278731-creating-a-daemon-the-python-way/
 """
 
 __author__ = "Jean Parpaillon"
@@ -10,101 +8,120 @@ __copyright__ = "Copyright (C) 2010 Kerlabs"
 __revision__ = "$Id$"
 __version__ = "0.1"
 
-import os, sys, signal, time, lockfile
+import os, sys, signal, lockfile
 import logging, logging.handlers
 from optparse import OptionParser
 import daemon
+import dbus, dbus.service, dbus.mainloop.glib
+import gobject
 import kerrighed
 
 NAME = 'kerrighed-manager'
-POLLTIME = 1
+POLLTIME = 1000 # ms
 PIDFILE = '/var/run/KerrighedManager.pid'
+
+# dbus constants shared between applet and manager
+dbus_service = 'org.kerrighed.KerrighedManager'
+dbus_interface_manager = dbus_service + '.Manager'
+dbus_interface_applet = dbus_service + '.Applet'
+dbus_path_manager = '/org/kerrighed/KerrighedManager/manager'
+dbus_path_applet = '/org/kerrighed/KerrighedManager/applet'
 
 log = logging.getLogger()
 
-class KerrighedManager(object):
-
+class KerrighedManager(dbus.service.Object):
    def __init__(self, autoadd=False):
-      self.online = None
-      self.present = None
+      bus = dbus.service.BusName(dbus_service, dbus.SystemBus())
+
+      dbus.service.Object.__init__(self, bus, dbus_path_manager)
       self.autoadd = autoadd
-
-   def run(self):
-      try:
-         self.init()
-      except Exception, e:
-         log.error(str(e))
-      while True:
-         time.sleep(POLLTIME)
-         try:
-            self.update()
-         except Exception, e: 
-            log.error(str(e))
-            break
-
-   def init(self):
-      status = kerrighed.krg_nodes_status()
-      self.online = status.get_online()
-      self.present = status.get_present()
-      msg = 'present: %i, online: %i' % (len(self.present), len(self.online))
-      log.info(msg)
+      self.online = kerrighed.krg_node_set()
+      self.present = kerrighed.krg_node_set()
       log.info('autoadd is set to %s' % self.autoadd)
 
-   def set_autoadd(self, value):
+   def run(self):
+      self.update()
+
+      loop = gobject.MainLoop()
+      gobject.timeout_add(POLLTIME, self.update)
+      loop.run()
+
+   @dbus.service.method(dbus_interface=dbus_interface_manager,
+                        in_signature='', out_signature='b')
+   def GetAutoadd(self):
+      return self.autoadd
+
+   @dbus.service.method(dbus_interface=dbus_interface_manager,
+                        in_signature='b', out_signature='b')
+   def SetAutoadd(self, value):
       log.info('autoadd is set to %s' % value)
       self.autoadd = value
+      return self.autoadd
 
-   def handle_present_to_online(self, node):
+   @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
+   def PresentToOnline(self, node):
       log.info('node %i has join the cluster' % node)
 
-   def handle_present_to_possible(self, node):
+   @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
+   def PresentToPossible(self, node):
       log.info('node %i has disappeared' % node)
 
-   def handle_possible_to_present(self, node):
+   @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
+   def PossibleToPresent(self, node):
       if self.autoadd:
          s = kerrighed.krg_node_set()
          s.add(node)
          kerrighed.krg_nodes_add(s)
       log.info('node %i is ready for joining' % node)
 
-   def handle_online_to_present(self, node):
+   @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
+   def OnlineToPresent(self, node):
       log.info('node %i has left the cluster' % node)
 
-   def handle_online_to_possible(self, node):
-      self.handle_present_to_possible(node)
+   @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
+   def OnlineToPossible(self, node):
+      log.info('node %i has disappeared' % node)
 
-   def handle_possible_to_online(self, node):
-      self.handle_present_to_online(node)
+   @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
+   def PossibleToOnline(self, node):
+      log.info('node %i has join the cluster' % node)
 
    def update(self):
-      status = kerrighed.krg_nodes_status()
-      for node in status.get_online():
-         if node in self.online:
-            continue
-         elif node in self.present:
-            self.handle_present_to_online(node)
-            self.present.discard(node)
-            self.online.add(node)
-         else:
-            self.handle_possible_to_online(node)
-            self.online.add(node)
-      for node in status.get_present():
-         if node in self.online:
-            self.handle_online_to_present(node)
-            self.online.discard(node)
-            self.present.add(node)
-         elif node in self.present:
-            continue
-         else:
-            self.handle_possible_to_present(node)
-            self.present.add(node)
-      for node in status.get_possible():
-         if node in self.online:
-            self.handle_online_to_possible(node)
-            self.online.discard(node)
-         elif node in self.present:
-            self.handle_present_to_possible(node)
-            self.present.discard(node)
+      log.debug("Update nodes status")
+      try:
+         status = kerrighed.krg_nodes_status()
+         for node in status.get_online():
+            if node in self.online:
+               continue
+            elif node in self.present:
+               self.PresentToOnline(node)
+               self.present.discard(node)
+               self.online.add(node)
+            else:
+               self.PossibleToOnline(node)
+               self.online.add(node)
+         for node in status.get_present():
+            if node in self.online:
+               self.OnlineToPresent(node)
+               self.online.discard(node)
+               self.present.add(node)
+            elif node in self.present:
+               continue
+            else:
+               self.PossibleToPresent(node)
+               self.present.add(node)
+         for node in status.get_possible():
+            if node in self.online:
+               self.OnlineToPossible(node)
+               self.online.discard(node)
+            elif node in self.present:
+               self.PresentToPossible(node)
+               self.present.discard(node)
+      except Exception, e: 
+         log.error(str(e))
+         sys.exit(1)
+
+      return True
 
 def handle_exit(value):
    log.info('Exiting...')
@@ -123,6 +140,9 @@ def main():
    ret = 0
 
    parser = OptionParser()
+   parser.add_option("-d", "--debug",
+                     action="store_true", dest="debug", default=False,
+                     help="print debug messages")
    parser.add_option("-D", "--foreground",
                      action="store_true", dest="foreground", default=False,
                      help="don't daemonize")
@@ -137,19 +157,26 @@ def main():
       pidfile = options.pidfile
    autoadd = options.autoadd
 
-   log.setLevel(logging.INFO)
+   if options.debug:
+      log.setLevel(logging.DEBUG)
+   else:
+      log.setLevel(logging.INFO)
    if options.foreground:
       context = ForegroundContext()
    else:
       context = daemon.DaemonContext(pidfile=lockfile.FileLock(pidfile))
       
-   km = KerrighedManager(autoadd=autoadd)
    with context:
       if options.foreground:
          handler = logging.StreamHandler(sys.stderr)
       else:
          handler = logging.handlers.SysLogHandler(address='/dev/log')
+      fmt_head = '%s[%u]' % (NAME, os.getpid())
+      handler.setFormatter(logging.Formatter(fmt_head + ": %(message)s"))
       log.addHandler(handler)
+
+      dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+      km = KerrighedManager(autoadd=autoadd)
       km.run()
       
    sys.exit(ret)
