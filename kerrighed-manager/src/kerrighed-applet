@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+""" kerrighed-applet: manage Kerrighed cluster with kerrighed-manager through Dbus
+"""
+
+__author__ = "Jean Parpaillon"
+__copyright__ = "Copyright (C) 2010 Kerlabs"
+
+__revision__ = "$Id$"
+__version__ = "0.1"
+
+import os, sys, signal, lockfile
+import logging, logging.handlers
+from optparse import OptionParser
+import daemon
+import dbus, dbus.service, dbus.mainloop.glib
+import gobject
+import kerrighed
+
+NAME = 'kerrighed-applet'
+
+# dbus constants shared between applet and manager
+dbus_service = 'org.kerrighed.KerrighedManager'
+dbus_interface_manager = dbus_service + '.Manager'
+dbus_interface_applet = dbus_service + '.Applet'
+dbus_path_manager = '/org/kerrighed/KerrighedManager/manager'
+dbus_path_applet = '/org/kerrighed/KerrighedManager/applet'
+
+log = logging.getLogger()
+
+class KerrighedApplet(object):
+
+   def __init__(self):
+      self.bus = dbus.SystemBus()
+      #bus_name = dbus.service.BusName(dbus_service, bus)
+      manager_proxy = self.bus.get_object(dbus_service, dbus_path_manager)
+      self.manager = dbus.Interface(manager_proxy, dbus_interface=dbus_interface_manager)
+
+      self.bus.add_signal_receiver(self.handle_PresentToOnline, 'PresentToOnline',
+                                   dbus_interface_manager, dbus_service, dbus_path_manager)
+      self.bus.add_signal_receiver(self.handle_PresentToPossible, 'PresentToPossible',
+                                   dbus_interface_manager, dbus_service, dbus_path_manager)
+      self.bus.add_signal_receiver(self.handle_PossibleToPresent, 'PossibleToPresent',
+                                   dbus_interface_manager, dbus_service, dbus_path_manager)
+      self.bus.add_signal_receiver(self.handle_OnlineToPresent, 'OnlineToPresent',
+                                   dbus_interface_manager, dbus_service, dbus_path_manager)
+      self.bus.add_signal_receiver(self.handle_OnlineToPossible, 'OnlineToPossible',
+                                   dbus_interface_manager, dbus_service, dbus_path_manager)
+      self.bus.add_signal_receiver(self.handle_PossibleToOnline, 'PossibleToOnline',
+                                   dbus_interface_manager, dbus_service, dbus_path_manager)
+
+   def handle_PresentToOnline(self, node):
+      log.debug('Received PresentToOnline: %i' % node)
+
+   def handle_PresentToPossible(self, node):
+      log.debug('Received PresentToPossible: %i' % node)
+
+   def handle_PossibleToPresent(self, node):
+      log.debug('Received PossibleToPresent: %i' % node)
+
+   def handle_OnlineToPresent(self, node):
+      log.debug('Received OnlineToPresent: %i' % node)
+
+   def handle_OnlineToPossible(self, node):
+      log.debug('Received OnlineToPossible: %i' % node)
+
+   def handle_PossibleToOnline(self, node):
+      log.debug('Received PossibleToOnline: %i' % node)
+
+   def run(self):
+      loop = gobject.MainLoop()
+      loop.run()
+
+def main():
+   ret = 0
+
+   parser = OptionParser()
+   parser.add_option("-d", "--debug",
+                     action="store_true", dest="debug", default=False,
+                     help="print debug messages")
+   (options, args) = parser.parse_args()
+
+   if options.debug:
+      log.setLevel(logging.DEBUG)
+      handler = logging.StreamHandler(sys.stderr)
+   else:
+      log.setLevel(logging.INFO)
+      handler = logging.handlers.SysLogHandler(address='/dev/log')
+   fmt_head = '%s[%u]' % (NAME, os.getpid())
+   handler.setFormatter(logging.Formatter(fmt_head + ": %(message)s"))
+   log.addHandler(handler)
+
+   dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+   applet = KerrighedApplet()
+   applet.run()
+      
+   sys.exit(ret)
+
+if __name__ == "__main__":
+   main()
