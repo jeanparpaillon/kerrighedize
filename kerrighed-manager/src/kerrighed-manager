@@ -58,6 +58,14 @@ class KerrighedManager(dbus.service.Object):
       self.autoadd = value
       return self.autoadd
 
+   @dbus.service.method(dbus_interface=dbus_interface_manager,
+                        in_signature='u', out_signature='b')
+   def AddNode(self, node):
+      s = kerrighed.krg_node_set()
+      s.add(node)
+      kerrighed.krg_nodes_add(s)
+      return True
+
    @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
    def PresentToOnline(self, node):
       log.info('node %i has join the cluster' % node)
@@ -69,9 +77,7 @@ class KerrighedManager(dbus.service.Object):
    @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
    def PossibleToPresent(self, node):
       if self.autoadd:
-         s = kerrighed.krg_node_set()
-         s.add(node)
-         kerrighed.krg_nodes_add(s)
+         self.AddNode(node)
       log.info('node %i is ready for joining' % node)
 
    @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
