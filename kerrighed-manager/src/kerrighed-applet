@@ -2,6 +2,11 @@
 """ kerrighed-applet: manage Kerrighed cluster with kerrighed-manager through Dbus
 """
 
+NAME = 'kerrighed-applet'
+__longname__ = 'Kerrighed Applet'
+__description__ = "Kerrighed Applet allows to monitor and manage a Kerrighed cluster"
+__website__ = "http://kerrighed.org/"
+
 __author__ = "Jean Parpaillon"
 __copyright__ = "Copyright (C) 2010 Kerlabs"
 
@@ -9,6 +14,7 @@ __revision__ = "$Id$"
 __version__ = "0.1"
 
 import os, sys, signal, lockfile
+import time
 import logging, logging.handlers
 from optparse import OptionParser
 import daemon
@@ -17,8 +23,6 @@ import pygtk
 pygtk.require('2.0')
 import gtk, gobject, pynotify
 import kerrighed
-
-NAME = 'kerrighed-applet'
 
 NOTIFY_TIMEOUT = 4500
 
@@ -55,6 +59,14 @@ class AutoaddMenuItem(gtk.CheckMenuItem):
       status = not self.manager.GetAutoadd()
       self.manager.SetAutoadd(status)
 
+class NodesMenu(gtk.Menu):
+   def __init__(self, manager):
+      self.manager = manager
+      super(NodesMenu, self).__init__()
+
+      menuItem = gtk.MenuItem('Des noeuds', self)
+      self.append(menuItem)
+
 class KerrighedApplet(object):
 
    def __init__(self):
@@ -62,9 +74,17 @@ class KerrighedApplet(object):
 
       # Init dbus
       self.bus = dbus.SystemBus()
-      manager_proxy = self.bus.get_object(dbus_service, dbus_path_manager)
+      while True:
+         try:
+            manager_proxy = self.bus.get_object(dbus_service, dbus_path_manager)
+            log.debug("Connected to manager")
+            break
+         except dbus.exceptions.DBusException, dbe:
+            # Retry
+            log.debug("Could not connect to manager, will retry in 5 sec...")
+            time.sleep(5)
+            pass
       self.manager = dbus.Interface(manager_proxy, dbus_interface=dbus_interface_manager)
-      log.debug("Connected to manager")
 
       self.bus.add_signal_receiver(self.handle_PresentToOnline, 'PresentToOnline',
                                    dbus_interface_manager, dbus_service, dbus_path_manager)
@@ -86,26 +106,53 @@ class KerrighedApplet(object):
       self.statusIcon.set_tooltip("Hello World")
 
       self.rightMenu = gtk.Menu()
+
       self.rightMenu.append(AutoaddMenuItem(self.manager))
-      self.quitMenuItem = gtk.ImageMenuItem(gtk.STOCK_QUIT)
-      self.quitMenuItem.connect('activate', self.handle_Quit, self.statusIcon)
-      self.rightMenu.append(self.quitMenuItem)
+      self.rightMenu.append(gtk.SeparatorMenuItem())
+
+      menuItem = gtk.ImageMenuItem(gtk.STOCK_ABOUT)
+      menuItem.connect('activate', self.handle_About)
+
+      menuItem = gtk.ImageMenuItem(gtk.STOCK_QUIT)
+      menuItem.connect('activate', self.handle_Quit, self.statusIcon)
+      self.rightMenu.append(menuItem)
+
+      self.leftMenu = NodesMenu(self.manager)
 
       self.statusIcon.connect('popup-menu', self.handle_PopupMenu, self.rightMenu)
+      self.statusIcon.connect('activate', self.handle_PopupNodesMenu, self.leftMenu)
       self.statusIcon.set_visible(1)
 
       # Init notify
       pynotify.init(NAME)
 
+   def handle_About(self, widget):
+      about = gtk.AboutDialog()
+      about.set_program_name(__longname__)
+      about.set_version(__version__)
+      about.set_copyright(__copyright__)
+      about.set_comments(__description__)
+      about.set_website(__website__)
+      about.set_logo(gtk.gdk.pixbuf_new_from_file(KERRIGHED_ICON_PATH))
+      about.run()
+      about.destroy()
+
    def handle_Quit(self, widget, data=None):
       gtk.main_quit()
 
+   def handle_PopupNodesMenu(self, widget, data=None):
+      self.leftMenu.show_all()
+      self.leftMenu.popup(None, None, gtk.status_icon_position_menu,
+                          1, gtk.get_current_event_time(), self.statusIcon)
+      self.leftMenu.connect('hide', self.handle_PopupNodesMenuHide, self.statusIcon)
+
+   def handle_PopupNodesMenuHide(self, widget, icon):
+      return True
+
    def handle_PopupMenu(self, widget, button, time, data=None):
-      if button == 3:
-         if data:
-            data.show_all()
-            data.popup(None, None, gtk.status_icon_position_menu,
-                       3, time, self.statusIcon)
+      self.rightMenu.show_all()
+      self.rightMenu.popup(None, None, gtk.status_icon_position_menu,
+                           3, time, self.statusIcon)
 
    def handle_PresentToOnline(self, node):
       self.NotifyOnline(node)

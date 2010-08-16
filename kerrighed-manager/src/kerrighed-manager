@@ -61,6 +61,7 @@ class KerrighedManager(dbus.service.Object):
    @dbus.service.method(dbus_interface=dbus_interface_manager,
                         in_signature='u', out_signature='b')
    def AddNode(self, node):
+      log.info('adding node %i to the cluster' % node)
       s = kerrighed.krg_node_set()
       s.add(node)
       kerrighed.krg_nodes_add(s)
