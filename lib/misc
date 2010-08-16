@@ -9,7 +9,7 @@ function k_step_misc
 
 function k_misc
 {
-    services="krghalt krghostname.sh krgreboot krgremount krgsshd kerrighed krglast krgdiskless"
+    services="krghalt krghostname.sh krgreboot krgremount krgsshd kerrighed krglast krgdiskless krgnetwork"
     for service in $services; do
 	k_enable_service $service
     done

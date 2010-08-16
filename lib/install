@@ -9,11 +9,13 @@ scripts="\
         etc/init.d/krgreboot etc/init.d/krgremount \
         etc/init.d/krgsshd etc/init.d/krglast \
         etc/init.d/krgdiskless usr/sbin/krgctnrinit \
+        etc/init.d/krgnetwork \
 "
 datas="\
         lib/init/kerrighed-functions \
         etc/default/krgdnsmasq etc/default/krgexport \
         etc/default/krgremount etc/default/krgsshd \
+        etc/network/interfaces.diskless \
 "
 
 distdir=${basedir}/dist
