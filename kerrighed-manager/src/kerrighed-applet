@@ -13,10 +13,14 @@ import logging, logging.handlers
 from optparse import OptionParser
 import daemon
 import dbus, dbus.service, dbus.mainloop.glib
-import gobject
+import pygtk
+pygtk.require('2.0')
+import gtk, gobject, pynotify
 import kerrighed
 
 NAME = 'kerrighed-applet'
+
+NOTIFY_TIMEOUT = 4500
 
 # dbus constants shared between applet and manager
 dbus_service = 'org.kerrighed.KerrighedManager'
@@ -27,13 +31,40 @@ dbus_path_applet = '/org/kerrighed/KerrighedManager/applet'
 
 log = logging.getLogger()
 
+def get_data_dir():
+   srcdatadir = os.path.abspath(os.path.join(os.path.join(os.path.dirname(sys.argv[0]), '..'), 'data'))
+   if os.path.isdir(srcdatadir):
+      return srcdatadir
+   else:
+      return '/usr/share/kerrighed-manager'
+
+def get_data_path(name):
+   return os.path.join(get_data_dir(), name)
+
+KERRIGHED_ICON_PATH = get_data_path('kerrighed.png')
+
+class AutoaddMenuItem(gtk.CheckMenuItem):
+   def __init__(self, manager):
+      self.manager = manager
+
+      super(AutoaddMenuItem, self).__init__("Always add node to cluster")
+      self.set_active(self.manager.GetAutoadd())
+      self.connect('toggled', self.handle_toggleAutoadd)
+
+   def handle_toggleAutoadd(self, widget):
+      status = not self.manager.GetAutoadd()
+      self.manager.SetAutoadd(status)
+
 class KerrighedApplet(object):
 
    def __init__(self):
+      self.nodes_notify = {}
+
+      # Init dbus
       self.bus = dbus.SystemBus()
-      #bus_name = dbus.service.BusName(dbus_service, bus)
       manager_proxy = self.bus.get_object(dbus_service, dbus_path_manager)
       self.manager = dbus.Interface(manager_proxy, dbus_interface=dbus_interface_manager)
+      log.debug("Connected to manager")
 
       self.bus.add_signal_receiver(self.handle_PresentToOnline, 'PresentToOnline',
                                    dbus_interface_manager, dbus_service, dbus_path_manager)
@@ -48,27 +79,96 @@ class KerrighedApplet(object):
       self.bus.add_signal_receiver(self.handle_PossibleToOnline, 'PossibleToOnline',
                                    dbus_interface_manager, dbus_service, dbus_path_manager)
 
+      # Init gtk stuff
+      self.statusIcon = gtk.StatusIcon()
+      self.statusIcon.set_from_file(KERRIGHED_ICON_PATH)
+      self.statusIcon.set_visible(True)
+      self.statusIcon.set_tooltip("Hello World")
+
+      self.rightMenu = gtk.Menu()
+      self.rightMenu.append(AutoaddMenuItem(self.manager))
+      self.quitMenuItem = gtk.ImageMenuItem(gtk.STOCK_QUIT)
+      self.quitMenuItem.connect('activate', self.handle_Quit, self.statusIcon)
+      self.rightMenu.append(self.quitMenuItem)
+
+      self.statusIcon.connect('popup-menu', self.handle_PopupMenu, self.rightMenu)
+      self.statusIcon.set_visible(1)
+
+      # Init notify
+      pynotify.init(NAME)
+
+   def handle_Quit(self, widget, data=None):
+      gtk.main_quit()
+
+   def handle_PopupMenu(self, widget, button, time, data=None):
+      if button == 3:
+         if data:
+            data.show_all()
+            data.popup(None, None, gtk.status_icon_position_menu,
+                       3, time, self.statusIcon)
+
    def handle_PresentToOnline(self, node):
+      self.NotifyOnline(node)
       log.debug('Received PresentToOnline: %i' % node)
 
    def handle_PresentToPossible(self, node):
+      self.NotifyPossible(node)
       log.debug('Received PresentToPossible: %i' % node)
 
    def handle_PossibleToPresent(self, node):
+      self.NotifyPresent(node)
       log.debug('Received PossibleToPresent: %i' % node)
 
    def handle_OnlineToPresent(self, node):
+      self.NotifyPresent(node)
       log.debug('Received OnlineToPresent: %i' % node)
 
    def handle_OnlineToPossible(self, node):
+      self.NotifyPossible(node)
       log.debug('Received OnlineToPossible: %i' % node)
 
    def handle_PossibleToOnline(self, node):
+      self.NotifyOnline(node)
       log.debug('Received PossibleToOnline: %i' % node)
 
+   def handle_AddAction(self, notify, action):
+      node = int(action.replace('add', ''))
+      notify.close()
+      log.debug('Adding node %i to the cluster' % node)
+      self.manager.AddNode(node)
+
+   def handle_setAutoadd(self, notify, action):
+      assert('setAutoadd' == action)
+      log.debug('Set autoadd to True')
+      self.manager.SetAutoadd(True)
+      notify.close()
+
+   def NotifyPossible(self, node):
+      n = self._GetNotify(node, "Has left the cluster")
+      n.show()
+
+   def NotifyPresent(self, node):
+      n = self._GetNotify(node, "Is ready for joining the cluster")
+      n.add_action("add%i" % node, "Add", self.handle_AddAction)
+      if not self.manager.GetAutoadd():
+         n.add_action("setAutoadd", "Always add", self.handle_setAutoadd)
+      n.show()
+
+   def NotifyOnline(self, node):
+      n = self._GetNotify(node, "Has join the cluster")
+      n.show()
+
+   def _GetNotify(self, node, msg):
+      title = 'Node %i' % node
+      icon_uri = "file://" + KERRIGHED_ICON_PATH
+
+      notify = pynotify.Notification(title, msg, icon_uri)
+      notify.set_timeout(NOTIFY_TIMEOUT)
+      self.nodes_notify[node] = notify
+      return self.nodes_notify[node]
+
    def run(self):
-      loop = gobject.MainLoop()
-      loop.run()
+      gtk.main()
 
 def main():
    ret = 0
@@ -92,7 +192,7 @@ def main():
    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
    applet = KerrighedApplet()
    applet.run()
-      
+
    sys.exit(ret)
 
 if __name__ == "__main__":

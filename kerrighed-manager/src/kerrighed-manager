@@ -123,7 +123,7 @@ class KerrighedManager(dbus.service.Object):
             elif node in self.present:
                self.PresentToPossible(node)
                self.present.discard(node)
-      except Exception, e: 
+      except Exception, e:
          log.error(str(e))
          sys.exit(1)
 
@@ -171,7 +171,7 @@ def main():
       context = ForegroundContext()
    else:
       context = daemon.DaemonContext(pidfile=lockfile.FileLock(pidfile))
-      
+
    with context:
       if options.foreground:
          handler = logging.StreamHandler(sys.stderr)
@@ -184,7 +184,7 @@ def main():
       dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
       km = KerrighedManager(autoadd=autoadd)
       km.run()
-      
+
    sys.exit(ret)
 
 if __name__ == "__main__":
