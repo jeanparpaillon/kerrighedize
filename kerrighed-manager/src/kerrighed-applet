@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """ kerrighed-applet: manage Kerrighed cluster with kerrighed-manager through Dbus
 """
-
 NAME = 'kerrighed-applet'
 __longname__ = 'Kerrighed Applet'
 __description__ = "Kerrighed Applet allows to monitor and manage a Kerrighed cluster"
 __website__ = "http://kerrighed.org/"
+__tooltip__ = "Kerrighed system status"
 
 __author__ = "Jean Parpaillon"
 __copyright__ = "Copyright (C) 2010 Kerlabs"
@@ -46,6 +46,13 @@ def get_data_path(name):
    return os.path.join(get_data_dir(), name)
 
 KERRIGHED_ICON_PATH = get_data_path('kerrighed.png')
+PRESENT_ICON_PATH = get_data_path('node_present.png')
+ONLINE_ICON_PATH = get_data_path('node_online.png')
+STATUS_UNKNOWN_ICON_PATH = get_data_path('node_unknown.png')
+
+STATUS_POSSIBLE = 1
+STATUS_PRESENT = 2
+STATUS_ONLINE = 3
 
 class AutoaddMenuItem(gtk.CheckMenuItem):
    def __init__(self, manager):
@@ -59,13 +66,103 @@ class AutoaddMenuItem(gtk.CheckMenuItem):
       status = not self.manager.GetAutoadd()
       self.manager.SetAutoadd(status)
 
+class NodeItem(gtk.MenuItem):
+   icon_path = STATUS_UNKNOWN_ICON_PATH
+   tooltip_text = 'Node in unknown status'
+
+   def __init__(self, nodeid):
+      super(NodeItem, self).__init__()
+      self.set_property('tooltip-text', self.__class__.tooltip_text)
+
+      self.nodeid = nodeid
+      self.box = gtk.HBox()
+      self.box.pack_start(self.get_icon())
+      self.box.pack_start(self.get_label())
+      self.add(self.box)
+
+   def get_icon(self):
+      item = gtk.Image()
+      item.set_padding(2, 5)
+      item.set_from_file(self.__class__.icon_path)
+      return item
+
+   def get_label(self):
+      return gtk.Label('Node %i' % self.nodeid)
+
+class PresentNodeItem(NodeItem):
+   icon_path = PRESENT_ICON_PATH
+   tooltip_text = 'Node ready to join'
+
+class OnlineNodeItem(NodeItem):
+   icon_path = ONLINE_ICON_PATH
+   tooltip_text = 'Node added to the cluster'
+
 class NodesMenu(gtk.Menu):
    def __init__(self, manager):
       self.manager = manager
       super(NodesMenu, self).__init__()
+      self.set_border_width(0)
 
-      menuItem = gtk.MenuItem('Des noeuds', self)
-      self.append(menuItem)
+   def update(self):
+      log.debug('Updating nodes menu')
+      map(lambda child: self.remove(child), self.get_children())
+
+      nodesStatus = self.manager.GetNodesStatus()
+
+      # Present nodes
+      self.addPresentNodes([ node for (node, status) in nodesStatus.items() if status==STATUS_PRESENT ])
+
+      # Online nodes
+      self.addOnlineNodes([ node for (node, status) in nodesStatus.items() if status==STATUS_ONLINE ])
+
+   def addPresentNodes(self, nodes):
+      item = gtk.MenuItem()
+      item.set_sensitive(False)
+      text = gtk.Label()
+      text.set_markup("<span weight=\"bold\">Present nodes</span>")
+      item.add(text)
+      self.append(item)
+
+      if len(nodes)==0:
+         item = gtk.MenuItem()
+         item.set_sensitive(False)
+         text = gtk.Label()
+         text.set_markup("<span style=\"italic\" weight=\"bold\">No present node</span>")
+         item.add(text)
+         self.append(item)
+      else:
+         item = gtk.MenuItem('Add all')
+         item.connect('activate', self.handle_AddNodes, nodes)
+         self.append(item)
+         for node in nodes:
+            self.append(PresentNodeItem(node))
+
+   def addOnlineNodes(self, nodes):
+      item = gtk.MenuItem()
+      item.set_sensitive(False)
+      text = gtk.Label()
+      text.set_markup("<span weight=\"bold\">Online nodes</span>")
+      item.add(text)
+      self.append(item)
+
+      if len(nodes)==0:
+         item = gtk.MenuItem()
+         item.set_sensitive(False)
+         text = gtk.Label()
+         text.set_markup("<span style=\"italic\" weight=\"bold\">No online node</span>")
+         item.add(text)
+         self.append(item)
+      else:
+         for node in nodes:
+            self.append(OnlineNodeItem(node))
+
+   def handle_AddNodes(self, button, nodes):
+      log.debug('Adding nodes %s' % nodes)
+      map(lambda node: self.manager.AddNode(node), nodes)
+
+   def show_all(self):
+      self.update()
+      super(NodesMenu, self).show_all()
 
 class KerrighedApplet(object):
 
@@ -103,7 +200,7 @@ class KerrighedApplet(object):
       self.statusIcon = gtk.StatusIcon()
       self.statusIcon.set_from_file(KERRIGHED_ICON_PATH)
       self.statusIcon.set_visible(True)
-      self.statusIcon.set_tooltip("Hello World")
+      self.statusIcon.set_tooltip(__tooltip__)
 
       self.rightMenu = gtk.Menu()
 
@@ -112,6 +209,7 @@ class KerrighedApplet(object):
 
       menuItem = gtk.ImageMenuItem(gtk.STOCK_ABOUT)
       menuItem.connect('activate', self.handle_About)
+      self.rightMenu.append(menuItem)
 
       menuItem = gtk.ImageMenuItem(gtk.STOCK_QUIT)
       menuItem.connect('activate', self.handle_Quit, self.statusIcon)

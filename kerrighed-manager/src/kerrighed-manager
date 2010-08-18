@@ -8,7 +8,7 @@ __copyright__ = "Copyright (C) 2010 Kerlabs"
 __revision__ = "$Id$"
 __version__ = "0.1"
 
-import os, sys, signal, lockfile
+import os, sys, signal, time, lockfile
 import logging, logging.handlers
 from optparse import OptionParser
 import daemon
@@ -26,6 +26,10 @@ dbus_interface_manager = dbus_service + '.Manager'
 dbus_interface_applet = dbus_service + '.Applet'
 dbus_path_manager = '/org/kerrighed/KerrighedManager/manager'
 dbus_path_applet = '/org/kerrighed/KerrighedManager/applet'
+
+STATUS_POSSIBLE = 1
+STATUS_PRESENT = 2
+STATUS_ONLINE = 3
 
 log = logging.getLogger()
 
@@ -45,6 +49,22 @@ class KerrighedManager(dbus.service.Object):
       loop = gobject.MainLoop()
       gobject.timeout_add(POLLTIME, self.update)
       loop.run()
+
+   @dbus.service.method(dbus_interface=dbus_interface_manager,
+                        in_signature='', out_signature='a{ui}')
+   def GetNodesStatus(self):
+      ret = {}
+      try:
+         status = kerrighed.krg_nodes_status()
+         for node in status.get_online():
+            ret[node] = STATUS_ONLINE
+         for node in status.get_present():
+            ret[node] = STATUS_PRESENT
+      except Exception, e:
+         log.error(str(e))
+         sys.exit(1)
+
+      return ret
 
    @dbus.service.method(dbus_interface=dbus_interface_manager,
                         in_signature='', out_signature='b')
