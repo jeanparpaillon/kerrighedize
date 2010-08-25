@@ -1,0 +1,2 @@
+kerrighed-manager/src/kerrighed-manager usr/sbin/
+kerrighed-manager/org.kerrighed.KerrighedManager.conf etc/dbus-1/system.d/

@@ -1,0 +1,33 @@
+Source: kerrighedize
+Section: admin
+Priority: extra
+Maintainer: Jean Parpaillon <jean.parpaillon@kerlabs.com>
+Build-Depends: debhelper (>= 7.0.50~)
+Standards-Version: 3.9.1
+Homepage: http://kerrighed.org/
+Vcs-Git: git://git.kerlabs.com/etude/kerrighedize
+Vcs-Browser: http://git.kerlabs.com/?p=etude/kerrighedize.git;a=summary
+
+Package: kerrighedize
+Architecture: all
+Depends: nfs-kernel-server, atftpd, syslinux, grub-pc, ${shlibs:Depends}, ${misc:Depends}
+Suggests: dnsmasq
+Description: Extend a Kerrighed system with diskless nodes
+ Run on a system with a Kerrighed kernel installed, allow
+ to boot diskless nodes using this system and thus extends
+ a system on these nodes thanks to Kerrighed features.
+
+Package: kerrighed-manager
+Architecture: all
+Depends: python (>=2.6), python-dbus, python-gobject, ${misc:Depends}
+Description: Daemon to monitor Kerrighed nodes
+ Daemon to monitor Kerrighed nodes and, eventually, add
+ them to the cluster.
+ Use D-Bus to communicate with UI tools.
+
+Package: kerrighed-manager-applet
+Architecture: all
+Depends: python (>=2.6), python-dbus, python-gtk2, python-gobject, python-notify, kerrighed-manager, ${misc:Depends}
+Description: Gnome applet to control kerrighed-manager
+ Gnome applet which goes to notification bar and allows the user
+ to show nodes and add them to the cluster.

@@ -1,0 +1,6 @@
+# Defaults for kerrighed-manager initscript
+# sourced by /etc/init.d/kerrighed-manager
+# installed at /etc/default/kerrighed-manager by the maintainer scripts
+
+# Set --autoadd to automatically add nodes to the cluster when they are present
+#DAEMON_ARGS="--autoadd"

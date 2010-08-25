@@ -1,9 +1,14 @@
 #!/bin/bash -e
 #
 # common functions
-dft_valueinput=${basedir}/var/vars.default
-dft_valuecheck=${basedir}/var/vars.check
-dft_msg=${basedir}/var/vars.msg
+if [ "${basedir}" = "/usr/sbin" ]; then
+    vardir=/var/lib/kerrighedize
+else
+    vardir=${basedir}/var
+fi
+dft_valueinput=${vardir}/vars.default
+dft_valuecheck=${vardir}/vars.check
+dft_msg=${vardir}/vars.msg
 
 valueinput=${valueinput:-${dft_valueinput}}
 

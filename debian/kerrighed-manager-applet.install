@@ -1,0 +1,8 @@
+kerrighed-manager/src/kerrighed-applet usr/bin
+kerrighed-manager/data/node_online.png usr/share/kerrighed-manager-applet/
+kerrighed-manager/data/memory.png usr/share/kerrighed-manager-applet/
+kerrighed-manager/data/kerrighed.png usr/share/kerrighed-manager-applet/
+kerrighed-manager/data/node_present.png usr/share/kerrighed-manager-applet/
+kerrighed-manager/data/cpu.png usr/share/kerrighed-manager-applet/
+kerrighed-manager/data/node_unknown.png usr/share/kerrighed-manager-applet/
+kerrighed-manager/data/node.svg usr/share/kerrighed-manager-applet/

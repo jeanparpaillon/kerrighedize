@@ -1,0 +1,8 @@
+sbin
+etc/grub.d
+etc/network
+etc/default
+etc/init.d
+usr/sbin
+usr/share/kerrighedize
+var/lib/kerrighedize
