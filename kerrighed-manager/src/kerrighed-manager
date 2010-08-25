@@ -87,6 +87,15 @@ class KerrighedManager(dbus.service.Object):
       kerrighed.krg_nodes_add(s)
       return True
 
+   @dbus.service.method(dbus_interface=dbus_interface_manager,
+                        in_signature='u', out_signature='b')
+   def DelNode(self, node):
+      log.info('removing node %i from the cluster' % node)
+      s = kerrighed.krg_node_set()
+      s.add(node)
+      kerrighed.krg_nodes_remove(s)
+      return True
+
    @dbus.service.signal(dbus_interface=dbus_interface_manager, signature='u')
    def PresentToOnline(self, node):
       log.info('node %i has join the cluster' % node)

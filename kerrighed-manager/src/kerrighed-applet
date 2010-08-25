@@ -5,7 +5,6 @@ NAME = 'kerrighed-applet'
 __longname__ = 'Kerrighed Applet'
 __description__ = "Kerrighed Applet allows to monitor and manage a Kerrighed cluster"
 __website__ = "http://kerrighed.org/"
-__tooltip__ = "Kerrighed system status"
 
 __author__ = "Jean Parpaillon"
 __copyright__ = "Copyright (C) 2010 Kerlabs"
@@ -14,14 +13,14 @@ __revision__ = "$Id$"
 __version__ = "0.1"
 
 import os, sys, signal, lockfile
-import time
+import time, re
 import logging, logging.handlers
 from optparse import OptionParser
 import daemon
 import dbus, dbus.service, dbus.mainloop.glib
 import pygtk
 pygtk.require('2.0')
-import gtk, gobject, pynotify
+import gtk, gobject, pynotify, pango
 import kerrighed
 
 NOTIFY_TIMEOUT = 4500
@@ -50,9 +49,50 @@ PRESENT_ICON_PATH = get_data_path('node_present.png')
 ONLINE_ICON_PATH = get_data_path('node_online.png')
 STATUS_UNKNOWN_ICON_PATH = get_data_path('node_unknown.png')
 
+CPU_ICON_PATH = get_data_path('cpu.png')
+MEMORY_ICON_PATH = get_data_path('memory.png')
+
 STATUS_POSSIBLE = 1
 STATUS_PRESENT = 2
 STATUS_ONLINE = 3
+
+TITLE_TEXT_R = 0x5e / 255.0
+TITLE_TEXT_G = 0x5e / 255.0
+TITLE_TEXT_B = 0x5e / 255.0
+
+re_cpu = re.compile(r'^processor\s+:.*$')
+re_memory = re.compile(r'^MemTotal:\s+([0-9]+) kB.*$')
+
+def get_cpu_from_path(path):
+   ret = 0
+   with open(path, 'r') as f:
+      for line in f:
+         if re_cpu.match(line):
+            ret += 1
+   return ret
+
+def get_memory_from_path(path):
+   ret = ''
+   with open(path, 'r') as f:
+      for line in f:
+         m = re_memory.match(line)
+         if m:
+            ret = '%.2fGB' % (float(m.group(1)) / 1024.0 / 1024.0)
+            break
+   return ret
+
+def get_allnodes_cpu():
+   return get_cpu_from_path('/proc/nodes/cluster/cpuinfo')
+
+def get_allnodes_memory():
+   return get_memory_from_path('/proc/nodes/cluster/meminfo')
+
+def get_node_cpu(nodeid):
+   return get_cpu_from_path('/proc/nodes/node%i/cpuinfo' % nodeid)
+
+def get_node_memory(nodeid):
+   return get_memory_from_path('/proc/nodes/node%i/meminfo' % nodeid)
+
 
 class AutoaddMenuItem(gtk.CheckMenuItem):
    def __init__(self, manager):
@@ -72,13 +112,21 @@ class NodeItem(gtk.MenuItem):
 
    def __init__(self, nodeid):
       super(NodeItem, self).__init__()
+      self.nodeid = nodeid
       self.set_property('tooltip-text', self.__class__.tooltip_text)
 
-      self.nodeid = nodeid
-      self.box = gtk.HBox()
-      self.box.pack_start(self.get_icon())
-      self.box.pack_start(self.get_label())
+      self.box = gtk.HBox(False, 6)
       self.add(self.box)
+      self.icon = self.get_icon()
+      self.box.pack_start(self.icon, False, False, 0)
+      self.label = self.get_label()
+      self.box.pack_start(self.label, True, True, 0)
+      self.details = self.get_details()
+      self.box.pack_end(self.details, False, True, 0)
+
+      self.icon.show()
+      self.label.show()
+      self.details.show()
 
    def get_icon(self):
       item = gtk.Image()
@@ -87,7 +135,13 @@ class NodeItem(gtk.MenuItem):
       return item
 
    def get_label(self):
-      return gtk.Label('Node %i' % self.nodeid)
+      item = gtk.Label('Node %i' % self.nodeid)
+      item.set_alignment(0.0, 0.5)
+      return item
+
+   def get_details(self):
+      item = gtk.Image()
+      return item
 
 class PresentNodeItem(NodeItem):
    icon_path = PRESENT_ICON_PATH
@@ -97,74 +151,182 @@ class OnlineNodeItem(NodeItem):
    icon_path = ONLINE_ICON_PATH
    tooltip_text = 'Node added to the cluster'
 
+   def get_details(self):
+      box = gtk.HBox(False, 4)
+      item = gtk.Image()
+      item.set_from_file(CPU_ICON_PATH)
+      box.pack_start(item)
+      item = gtk.Label(str(get_node_cpu(self.nodeid)))
+      box.pack_start(item)
+      item = gtk.Image()
+      item.set_from_file(MEMORY_ICON_PATH)
+      box.pack_start(item)
+      item = gtk.Label(get_node_memory(self.nodeid))
+      box.pack_start(item)
+      return box
+
 class NodesMenu(gtk.Menu):
    def __init__(self, manager):
       self.manager = manager
       super(NodesMenu, self).__init__()
-      self.set_border_width(0)
 
    def update(self):
       log.debug('Updating nodes menu')
       map(lambda child: self.remove(child), self.get_children())
 
-      nodesStatus = self.manager.GetNodesStatus()
+      status = kerrighed.krg_nodes_status()
+      self.addPresentNodes(status.get_present())
+      #self.addPresentNodes(set([ i for i in range(9, 12)]))
+      self.addOnlineNodes(status.get_online())
+      #self.addOnlineNodes(set([ i for i in range(4) ]))
 
-      # Present nodes
-      self.addPresentNodes([ node for (node, status) in nodesStatus.items() if status==STATUS_PRESENT ])
-
-      # Online nodes
-      self.addOnlineNodes([ node for (node, status) in nodesStatus.items() if status==STATUS_ONLINE ])
-
-   def addPresentNodes(self, nodes):
+      item = self.get_menuTitle('Summary')
+      self.append(item)
       item = gtk.MenuItem()
-      item.set_sensitive(False)
-      text = gtk.Label()
-      text.set_markup("<span weight=\"bold\">Present nodes</span>")
-      item.add(text)
+      item.add(self.get_summary())
       self.append(item)
 
+   def get_summary(self):
+      box = gtk.HBox(False, 4)
+      item = gtk.Image()
+      item.set_from_file(CPU_ICON_PATH)
+      box.pack_start(item)
+      item = gtk.Label(str(get_allnodes_cpu()))
+      box.pack_start(item)
+      item = gtk.Image()
+      item.set_from_file(MEMORY_ICON_PATH)
+      box.pack_start(item)
+      item = gtk.Label(get_allnodes_memory())
+      box.pack_start(item)
+      return box
+
+   def get_menuTitle(self, text):
+      item = gtk.MenuItem(text)
+      item.set_sensitive(False)
+      label = item.get_child()
+      label.set_markup("<span weight=\"bold\">%s</span>" % text)
+      item.connect('expose-event', self.handle_exposeEvent)
+      return item
+
+   def get_menuComment(self, text):
+      item = gtk.MenuItem(text)
+      item.set_sensitive(False)
+      label = item.get_child()
+      label.set_markup("<span style=\"italic\" weight=\"bold\">%s</span>" % text)
+      return item
+
+   def get_nodesActionMenu(self, nodes, nodeCallback, allnodesCallback):
+      menu = gtk.Menu()
+      item = gtk.MenuItem('All nodes')
+      item.connect('activate', allnodesCallback, nodes)
+      menu.append(item)
+      menu.append(gtk.SeparatorMenuItem())
+      for node in nodes:
+         item = gtk.MenuItem('Node %s' % node)
+         item.connect('activate', nodeCallback, node)
+         menu.append(item)
+      return menu
+
+   def addPresentNodes(self, nodes):
+      self.append(self.get_menuTitle("Present nodes"))
+
       if len(nodes)==0:
-         item = gtk.MenuItem()
-         item.set_sensitive(False)
-         text = gtk.Label()
-         text.set_markup("<span style=\"italic\" weight=\"bold\">No present node</span>")
-         item.add(text)
-         self.append(item)
+         self.append(self.get_menuComment("No present node"))
       else:
-         item = gtk.MenuItem('Add all')
-         item.connect('activate', self.handle_AddNodes, nodes)
+         item = gtk.MenuItem('Add nodes')
+         item.set_submenu(self.get_nodesActionMenu(nodes, self.handle_AddNode, self.handle_AddNodes))
          self.append(item)
          for node in nodes:
             self.append(PresentNodeItem(node))
 
    def addOnlineNodes(self, nodes):
-      item = gtk.MenuItem()
-      item.set_sensitive(False)
-      text = gtk.Label()
-      text.set_markup("<span weight=\"bold\">Online nodes</span>")
-      item.add(text)
-      self.append(item)
+      self.append(self.get_menuTitle("Online nodes"))
 
       if len(nodes)==0:
-         item = gtk.MenuItem()
-         item.set_sensitive(False)
-         text = gtk.Label()
-         text.set_markup("<span style=\"italic\" weight=\"bold\">No online node</span>")
-         item.add(text)
-         self.append(item)
+         self.append(self.get_menuComment("No online node"))
       else:
+         item = gtk.MenuItem('Remove nodes')
+         item.set_submenu(self.get_nodesActionMenu(nodes, self.handle_DelNode, self.handle_DelNodes))
+         self.append(item)
          for node in nodes:
             self.append(OnlineNodeItem(node))
 
-   def handle_AddNodes(self, button, nodes):
+   def handle_AddNodes(self, item, nodes):
       log.debug('Adding nodes %s' % nodes)
       map(lambda node: self.manager.AddNode(node), nodes)
+
+   def handle_AddNode(self, item, node):
+      log.debug('Adding node %s' % node)
+      self.manager.AddNode(node)
+
+   def handle_DelNodes(self, nodes):
+      log.debug('Removing nodes %s' % nodes)
+      map(lambda node: self.manager.DelNode(node), nodes)
+
+   def handle_DelNode(self, node):
+      log.debug('Removing node %s' % node)
+      self.manager.DelNode(node)
+
+   def handle_exposeEvent(self, widget, event):
+      width = 0
+      height = 0
+      extrawidth = 0
+      extraheight = 0
+      xpadding = 10.0
+      ypadding = 5.0
+      postpadding = 0.0
+
+      label = widget.get_child()
+      cr = label.get_window().cairo_create()
+
+      # The drawing area we get is the whole menu; clip the drawing to the
+      # event area, which should just be our menu item.
+      cr.rectangle(gtk.gdk.Rectangle(event.area.x, event.area.y, event.area.width, event.area.height))
+      cr.clip()
+
+      # We also need to reposition the cairo context so that (0, 0) is the
+      # top-left of where we're supposed to start drawing.
+      allocation = widget.get_allocation()
+      cr.translate(allocation.x, allocation.y)
+
+      text = label.get_text()
+
+      style = widget.get_style()
+      desc = style.font_desc.copy()
+      desc.set_variant(pango.VARIANT_SMALL_CAPS)
+      desc.set_weight(pango.WEIGHT_SEMIBOLD)
+
+      layout = cr.create_layout()
+      layout.set_font_description(desc)
+      layout.set_text(text)
+      cr.update_layout(layout)
+      (owidth, oheight) = layout.get_size()
+      width = owidth / pango.SCALE
+      height += oheight / pango.SCALE
+
+      cr.save()
+
+      cr.set_source_rgba(1.0, 1.0, 1.0, 0.0)
+      cr.rectangle(0, 0, (width + 2 * xpadding), (height + ypadding + postpadding))
+      cr.fill()
+
+      # now the in-padding content
+      cr.translate(xpadding , ypadding)
+      cr.set_source_rgb(TITLE_TEXT_R, TITLE_TEXT_G, TITLE_TEXT_B)
+      cr.move_to(extrawidth, extraheight)
+      cr.show_layout(layout)
+
+      cr.restore()
+
+      widget.set_size_request(int(width + 2 * xpadding),
+                              int(height + ypadding + postpadding))
+      return True
 
    def show_all(self):
       self.update()
       super(NodesMenu, self).show_all()
 
-class KerrighedApplet(object):
+class KerrighedApplet(gtk.StatusIcon):
 
    def __init__(self):
       self.nodes_notify = {}
@@ -197,13 +359,16 @@ class KerrighedApplet(object):
                                    dbus_interface_manager, dbus_service, dbus_path_manager)
 
       # Init gtk stuff
-      self.statusIcon = gtk.StatusIcon()
-      self.statusIcon.set_from_file(KERRIGHED_ICON_PATH)
-      self.statusIcon.set_visible(True)
-      self.statusIcon.set_tooltip(__tooltip__)
+      super(KerrighedApplet, self).__init__()
+      self.set_from_file(KERRIGHED_ICON_PATH)
+      self.set_visible(True)
+      self.set_tooltip('Kerrighed')
+      self.connect('popup-menu', self.handle_PopupMenu)
+      self.connect('activate', self.handle_PopupNodesMenu)
+      self.connect('query-tooltip', self.handle_QueryTooltip)
+      self.set_visible(1)
 
       self.rightMenu = gtk.Menu()
-
       self.rightMenu.append(AutoaddMenuItem(self.manager))
       self.rightMenu.append(gtk.SeparatorMenuItem())
 
@@ -212,17 +377,28 @@ class KerrighedApplet(object):
       self.rightMenu.append(menuItem)
 
       menuItem = gtk.ImageMenuItem(gtk.STOCK_QUIT)
-      menuItem.connect('activate', self.handle_Quit, self.statusIcon)
+      menuItem.connect('activate', self.handle_Quit)
       self.rightMenu.append(menuItem)
 
       self.leftMenu = NodesMenu(self.manager)
 
-      self.statusIcon.connect('popup-menu', self.handle_PopupMenu, self.rightMenu)
-      self.statusIcon.connect('activate', self.handle_PopupNodesMenu, self.leftMenu)
-      self.statusIcon.set_visible(1)
-
       # Init notify
       pynotify.init(NAME)
+
+   def handle_QueryTooltip(self, widget, x, y, keyboard_mode, tooltip):
+      cluster_up = kerrighed.krg_cluster_status().is_up()
+      if cluster_up:
+         markup = '<span weight=\"bold\" >Kerrighed cluster: up</span>\n'
+
+         status = kerrighed.krg_nodes_status()
+         markup += 'Present nodes: %i\n' % status.num_present()
+         markup += 'Online nodes: %i\n' % status.num_online()
+         markup += 'Total CPU: %i\n' % get_allnodes_cpu()
+         markup += 'Total RAM: %s' % get_allnodes_memory()
+      else:
+         markup = '<span weight=\"bold\" >Kerrighed cluster: down</span>'
+      tooltip.set_markup(markup)
+      return True
 
    def handle_About(self, widget):
       about = gtk.AboutDialog()
@@ -235,22 +411,22 @@ class KerrighedApplet(object):
       about.run()
       about.destroy()
 
-   def handle_Quit(self, widget, data=None):
+   def handle_Quit(self, widget):
       gtk.main_quit()
 
-   def handle_PopupNodesMenu(self, widget, data=None):
+   def handle_PopupNodesMenu(self, widget):
       self.leftMenu.show_all()
       self.leftMenu.popup(None, None, gtk.status_icon_position_menu,
-                          1, gtk.get_current_event_time(), self.statusIcon)
-      self.leftMenu.connect('hide', self.handle_PopupNodesMenuHide, self.statusIcon)
+                          1, gtk.get_current_event_time(), self)
+      self.leftMenu.connect('hide', self.handle_PopupNodesMenuHide)
 
-   def handle_PopupNodesMenuHide(self, widget, icon):
+   def handle_PopupNodesMenuHide(self, widget):
       return True
 
-   def handle_PopupMenu(self, widget, button, time, data=None):
+   def handle_PopupMenu(self, widget, button, time):
       self.rightMenu.show_all()
       self.rightMenu.popup(None, None, gtk.status_icon_position_menu,
-                           3, time, self.statusIcon)
+                           3, time, self)
 
    def handle_PresentToOnline(self, node):
       self.NotifyOnline(node)
