@@ -8,7 +8,12 @@
 trap k_clean ERR
 
 export basedir=$(dirname $0)
-export libdir=${basedir}/lib
+
+if [ "${basedir}" = "/usr/sbin" ]; then
+    export libdir=/usr/share/kerrighedize
+else
+    export libdir=${basedir}/lib
+fi
 export tftp_dir=/srv/tftp
 export kernel_version=
 

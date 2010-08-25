@@ -31,6 +31,11 @@ function k_step_install
 	exit 1
     fi
 
+    if [ "${basedir}" = "/usr/sbin" ]; then
+	# If installed /usr/sbin, consider skipping this step
+	return 0
+    fi
+
     ret=0
     k_log "Install files...\n"
     for file in ${scripts}; do
